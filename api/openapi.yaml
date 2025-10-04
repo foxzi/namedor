@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: SmaillGeoDNS API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /zones:
+    get:
+      summary: List zones
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        '201': { description: Created }
+  /zones/{id}:
+    get:
+      summary: Get zone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Delete zone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: No Content }
+  /zones/{id}/rrsets:
+    get:
+      summary: List rrsets
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create rrset
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                ttl: { type: integer }
+                records:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      data: { type: string }
+                      country: { type: string }
+                      continent: { type: string }
+                      asn: { type: integer }
+                      subnet: { type: string }
+      responses:
+        '201': { description: Created }
+  /zones/{id}/rrsets/{rid}:
+    put:
+      summary: Update rrset
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: rid
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    patch:
+      summary: Patch rrset
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: rid
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Delete rrset
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: rid
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: No Content }
+  /zones/{id}/export:
+    get:
+      summary: Export zone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: format
+          schema: { type: string, enum: [json, bind] }
+      responses:
+        '200': { description: OK }
+  /zones/{id}/import:
+    post:
+      summary: Import zone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: format
+          schema: { type: string, enum: [json, bind] }
+        - in: query
+          name: mode
+          schema: { type: string, enum: [upsert, replace] }
+      responses:
+        '204': { description: No Content }
+
