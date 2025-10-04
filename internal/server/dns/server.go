@@ -37,7 +37,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
     }
     // GeoIP provider
     if cfg.GeoIP.Enabled && cfg.GeoIP.MMDBPath != "" {
-        prov, _, _ := geoip.NewMaxMind(cfg.GeoIP.MMDBPath, time.Duration(cfg.GeoIP.ReloadSec)*time.Second)
+        prov, _, _ := geoip.NewFromPath(cfg.GeoIP.MMDBPath, time.Duration(cfg.GeoIP.ReloadSec)*time.Second)
         s.geo = prov
     } else {
         s.geo = geoip.NewNoop()
@@ -105,7 +105,8 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
     }
 
     // Resolve locally
-    answers, ttl, err := s.lookup(r, q)
+    cip := clientIPFrom(r, w, s.cfg.GeoIP.UseECS)
+    answers, ttl, err := s.lookup(r, q, cip)
     if err == nil && len(answers) > 0 {
         m.Answer = answers
         _ = w.WriteMsg(m)
@@ -133,7 +134,7 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 // lookup resolves a question from DB applying Geo selection.
-func (s *Server) lookup(r *dns.Msg, q dns.Question) (answers []dns.RR, ttl uint32, err error) {
+func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answers []dns.RR, ttl uint32, err error) {
     qname := strings.ToLower(dns.Fqdn(q.Name))
     qtype := dns.TypeToString[q.Qtype]
 
@@ -163,7 +164,6 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question) (answers []dns.RR, ttl uint3
     }
 
     // Geo selection
-    clientIP := clientIPFromMsg(r)
     g := s.geo.Lookup(clientIP)
     recs := selectGeoRecords(set.Records, clientIP, g)
 
@@ -176,25 +176,31 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question) (answers []dns.RR, ttl uint3
     return answers, set.TTL, nil
 }
 
-func clientIPFromMsg(r *dns.Msg) netip.Addr {
-    // Try EDNS(0) Client Subnet (ECS) option
-    if opt := r.IsEdns0(); opt != nil {
-        for _, o := range opt.Option {
-            if ecs, ok := o.(*dns.EDNS0_SUBNET); ok {
-                var ip net.IP
-                if ecs.Family == 1 { // IPv4
-                    ip = ecs.Address.To4()
-                } else {
-                    ip = ecs.Address
-                }
-                if ip != nil {
-                    a, _ := netip.ParseAddr(ip.String())
-                    return a
+func clientIPFrom(r *dns.Msg, w dns.ResponseWriter, useECS bool) netip.Addr {
+    if useECS {
+        if opt := r.IsEdns0(); opt != nil {
+            for _, o := range opt.Option {
+                if ecs, ok := o.(*dns.EDNS0_SUBNET); ok {
+                    var ip net.IP
+                    if ecs.Family == 1 { // IPv4
+                        ip = ecs.Address.To4()
+                    } else {
+                        ip = ecs.Address
+                    }
+                    if ip != nil {
+                        a, _ := netip.ParseAddr(ip.String())
+                        return a
+                    }
                 }
             }
         }
     }
-    // Fallback unknown
+    if ra := w.RemoteAddr(); ra != nil {
+        host, _, err := net.SplitHostPort(ra.String())
+        if err == nil {
+            if a, err2 := netip.ParseAddr(host); err2 == nil { return a }
+        }
+    }
     return netip.Addr{}
 }
 
@@ -225,7 +231,10 @@ func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) []dbm.RData
             }
         }
         if r.ASN != nil {
-            // ASN lookup not implemented without GeoIP DB; skip
+            if g.ASN != 0 && *r.ASN == g.ASN {
+                asnMatch = append(asnMatch, r)
+                continue
+            }
         }
         if r.Country != nil && g.Country != "" && strings.EqualFold(*r.Country, g.Country) {
             countryMatch = append(countryMatch, r)

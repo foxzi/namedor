@@ -65,6 +65,11 @@ Testing
 - All tests: `go test ./...`
 - Tests use in-memory SQLite, сетевые сервисы не поднимаются.
 
+Integration Tests
+- End-to-end (REST + DNS):
+  - `go test ./internal/integration -run TestEndToEnd_DNS_and_REST -count=1`
+  - Под капотом: поднимает DNS на 19053 и REST на 18089, создаёт зону и A-запись через REST, затем делает DNS-запрос и проверяет ответ, включая повторный запрос (кэш).
+
 Development
 - Sync deps: `go mod tidy`
 - Build only main: `go build ./cmd/smaillgeodns`
