@@ -80,7 +80,7 @@ GeoIP Test Data Generator
 - Build: `go build ./cmd/mmdbgen`
 - Generate City/ASN MMDBs:
   - `./mmdbgen -in examples/geoip/spec.yaml -city-out ./geoipdb/city-ipv4.mmdb -asn-out ./geoipdb/asn-ipv4.mmdb`
-- Note: mmdbwriter rejects reserved (private/loopback) networks; use public test ranges like 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 for ECS-based tests.
+- By default, upstream mmdbwriter rejects reserved (private/loopback) networks. If you have a local patched mmdbwriter (e.g., in `../mmdbwriter`) without this restriction, this repo's `go.mod` already uses a `replace` to prefer it; you can then generate 127.x.x.x CIDRs for local ECS tests.
 
 Development
 - Sync deps: `go mod tidy`
