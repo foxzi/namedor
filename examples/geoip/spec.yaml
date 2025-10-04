@@ -1,0 +1,15 @@
+city:
+  - cidr: "192.0.2.0/24"     # TEST-NET-1
+    country: "RU"
+    continent: "EU"
+  - cidr: "198.51.100.0/24"  # TEST-NET-2
+    country: "GB"
+    continent: "EU"
+
+asn:
+  - cidr: "192.0.2.0/24"
+    asn: 65001
+    org: "TEST-ASN-1"
+  - cidr: "198.51.100.0/24"
+    asn: 65002
+    org: "TEST-ASN-2"

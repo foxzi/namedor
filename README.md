@@ -69,6 +69,17 @@ Integration Tests
 - End-to-end (REST + DNS):
   - `go test ./internal/integration -run TestEndToEnd_DNS_and_REST -count=1`
   - Под капотом: поднимает DNS на 19053 и REST на 18089, создаёт зону и A-запись через REST, затем делает DNS-запрос и проверяет ответ, включая повторный запрос (кэш).
+- GeoDNS (requires ./geoipdb with .mmdb files):
+  - Subnet/ECS selection: `go test ./internal/integration -run TestGeoDNS_WithECS_USCountry -count=1`
+  - Country/Continent/ASN selection (auto-skips if data missing): `go test ./internal/integration -run TestGeoDNS_WithECS_Country_Continent_ASN -count=1`
+
+GeoIP Test Data Generator
+- CLI utility to generate synthetic MMDB files for tests: `cmd/mmdbgen`
+- Spec example: `examples/geoip/spec.yaml` (uses RFC 5737 TEST-NET ranges)
+- Build: `go build ./cmd/mmdbgen`
+- Generate City/ASN MMDBs:
+  - `./mmdbgen -in examples/geoip/spec.yaml -city-out ./geoipdb/city-ipv4.mmdb -asn-out ./geoipdb/asn-ipv4.mmdb`
+- Note: mmdbwriter rejects reserved (private/loopback) networks; use public test ranges like 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 for ECS-based tests.
 
 Development
 - Sync deps: `go mod tidy`
