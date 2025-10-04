@@ -77,9 +77,12 @@ Integration Tests
 GeoIP Test Data Generator
 - CLI utility to generate synthetic MMDB files for tests: `cmd/mmdbgen`
 - Spec example: `examples/geoip/spec.yaml` (uses RFC 5737 TEST-NET ranges)
+- Localhost example: `examples/geoip/localhost.yaml` (127.0.1.0/24 → RU, 127.0.2.0/24 → GB)
 - Build: `go build ./cmd/mmdbgen`
 - Generate City/ASN MMDBs:
   - `./mmdbgen -in examples/geoip/spec.yaml -city-out ./geoipdb/city-ipv4.mmdb -asn-out ./geoipdb/asn-ipv4.mmdb`
+- Generate for localhost (requires local patched mmdbwriter via `replace`):
+  - `./mmdbgen -in examples/geoip/localhost.yaml -city-out ./geoipdb/city-localhost.mmdb -asn-out ./geoipdb/asn-localhost.mmdb`
 - By default, upstream mmdbwriter rejects reserved (private/loopback) networks. If you have a local patched mmdbwriter (e.g., in `../mmdbwriter`) without this restriction, this repo's `go.mod` already uses a `replace` to prefer it; you can then generate 127.x.x.x CIDRs for local ECS tests.
 
 Development
