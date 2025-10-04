@@ -72,6 +72,7 @@ Integration Tests
 - GeoDNS (requires ./geoipdb with .mmdb files):
   - Subnet/ECS selection: `go test ./internal/integration -run TestGeoDNS_WithECS_USCountry -count=1`
   - Country/Continent/ASN selection (auto-skips if data missing): `go test ./internal/integration -run TestGeoDNS_WithECS_Country_Continent_ASN -count=1`
+  - Synthetic MMDB (opt-in): set `GEOIP_SYNTH=1` and run `go test ./internal/integration -run TestGeoDNS_SyntheticMMDB -count=1`
 
 GeoIP Test Data Generator
 - CLI utility to generate synthetic MMDB files for tests: `cmd/mmdbgen`

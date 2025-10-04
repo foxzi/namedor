@@ -204,6 +204,9 @@ func clientIPFrom(r *dns.Msg, w dns.ResponseWriter, useECS bool) netip.Addr {
     return netip.Addr{}
 }
 
+// remapIP maps an IP from one CIDR into another CIDR with the same prefix length.
+// Useful to translate reserved ranges (e.g., 127.0.1.0/24) into TEST-NET for GeoIP lookup.
+
 func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) []dbm.RData {
     if len(recs) == 0 {
         return recs
