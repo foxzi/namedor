@@ -155,3 +155,90 @@ func assertDNSAnswer(t *testing.T, dnsAddr, qname string, ecsIP netip.Addr, want
     }
     if !found { t.Fatalf("want %s, got %#v", want, in.Answer) }
 }
+
+func TestGeoDNS_SyntheticMMDB_IPv6(t *testing.T) {
+    if os.Getenv("GEOIP_SYNTH") != "1" {
+        t.Skip("set GEOIP_SYNTH=1 to enable synthetic MMDB test")
+    }
+    tmp := t.TempDir()
+    cityPath := filepath.Join(tmp, "city-ipv6.mmdb")
+    asnPath := filepath.Join(tmp, "asn-ipv6.mmdb")
+    // Use documentation ranges 2001:db8::/32 for IPv6 samples
+    writeCityMMDB(t, cityPath, map[string]struct{ Country, Continent string }{
+        "2001:db8:1::/64": {Country: "RU", Continent: "EU"},
+        "2001:db8:2::/64": {Country: "GB", Continent: "EU"},
+    })
+    writeASNMMDB(t, asnPath, map[string]uint32{
+        "2001:db8:1::/64": 65101,
+        "2001:db8:2::/64": 65102,
+    })
+
+    dnsAddr := "127.0.0.1:19057"
+    restAddr := "127.0.0.1:18093"
+    dbPath := filepath.Join(tmp, "dns.db")
+    cfg := &config.Config{
+        Listen: dnsAddr, RESTListen: restAddr, APIToken: "devtoken",
+        AutoSOAOnMissing: true, DefaultTTL: 60,
+        DB: config.DBConfig{Driver: "sqlite", DSN: "file:" + dbPath + "?_foreign_keys=on"},
+        GeoIP: config.GeoIPConfig{Enabled: true, MMDBPath: tmp, ReloadSec: 0, UseECS: true},
+    }
+    gdb, err := db.Open(cfg.DB); if err != nil { t.Fatal(err) }
+    if err := db.AutoMigrate(gdb); err != nil { t.Fatal(err) }
+    dnsServer, _ := dnssrv.NewServer(cfg, gdb)
+    restServer := restsrv.NewServer(cfg, gdb)
+    go func() { _ = dnsServer.Start() }()
+    go func() { _ = restServer.Start() }()
+    if err := waitHTTPReady("http://"+restAddr+"/zones", 5*time.Second); err != nil { t.Fatal(err) }
+
+    type zoneResp struct{ ID uint `json:"id"` }
+    zr := zoneResp{}
+    reqZ := bytes.NewBufferString(`{"name":"localgeo6.test"}`)
+    rreq, _ := http.NewRequest("POST", "http://"+restAddr+"/zones", reqZ)
+    rreq.Header.Set("Authorization", "Bearer "+cfg.APIToken)
+    rreq.Header.Set("Content-Type", "application/json")
+    rresp, err := http.DefaultClient.Do(rreq); if err != nil { t.Fatal(err) }
+    if rresp.StatusCode != http.StatusCreated { t.Fatalf("zone status %d", rresp.StatusCode) }
+    _ = json.NewDecoder(rresp.Body).Decode(&zr); rresp.Body.Close()
+
+    // AAAA rrset with ASN/country/generic
+    body := `{"name":"svc","type":"AAAA","ttl":60,"records":[
+        {"data":"2001:db8:100::10","asn":65101},
+        {"data":"2001:db8:100::14","asn":65102},
+        {"data":"2001:db8:100::11","country":"RU"},
+        {"data":"2001:db8:100::12","country":"GB"},
+        {"data":"2001:db8:100::13"}
+    ]}`
+    reqR, _ := http.NewRequest("POST", "http://"+restAddr+"/zones/"+itoa(zr.ID)+"/rrsets", bytes.NewBufferString(body))
+    reqR.Header.Set("Authorization", "Bearer "+cfg.APIToken)
+    reqR.Header.Set("Content-Type", "application/json")
+    rresp2, err := http.DefaultClient.Do(reqR); if err != nil { t.Fatal(err) }
+    if rresp2.StatusCode != http.StatusCreated { t.Fatalf("rrset status %d", rresp2.StatusCode) }
+    rresp2.Body.Close()
+
+    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:1::1"), "2001:db8:100::10")
+    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:2::1"), "2001:db8:100::14")
+
+    _ = dnsServer.Shutdown()
+}
+
+func assertDNSAnswerAAAA(t *testing.T, dnsAddr, qname string, ecsIP netip.Addr, want string) {
+    t.Helper()
+    c := &dns.Client{Timeout: 2 * time.Second}
+    m := new(dns.Msg)
+    m.SetQuestion(qname, dns.TypeAAAA)
+    // ECS option
+    opt := &dns.OPT{Hdr: dns.RR_Header{Name: ".", Rrtype: dns.TypeOPT}}
+    fam := uint16(2)
+    e := &dns.EDNS0_SUBNET{Code: dns.EDNS0SUBNET, Family: fam, SourceNetmask: 56}
+    e.Address = net.ParseIP(ecsIP.String())
+    opt.Option = append(opt.Option, e)
+    m.Extra = append(m.Extra, opt)
+    in, _, err := c.Exchange(m, dnsAddr)
+    if err != nil { t.Fatalf("dns exchange: %v", err) }
+    if in.Rcode != dns.RcodeSuccess { t.Fatalf("rcode %d", in.Rcode) }
+    found := false
+    for _, rr := range in.Answer {
+        if aaaa, _ := rr.(*dns.AAAA); aaaa != nil && aaaa.AAAA.String() == want { found = true; break }
+    }
+    if !found { t.Fatalf("want %s, got %#v", want, in.Answer) }
+}

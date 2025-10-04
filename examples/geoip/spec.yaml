@@ -5,6 +5,12 @@ city:
   - cidr: "198.51.100.0/24"  # TEST-NET-2
     country: "GB"
     continent: "EU"
+  - cidr: "2001:db8:1::/64"   # DOC IPv6-1
+    country: "RU"
+    continent: "EU"
+  - cidr: "2001:db8:2::/64"   # DOC IPv6-2
+    country: "GB"
+    continent: "EU"
 
 asn:
   - cidr: "192.0.2.0/24"
@@ -13,3 +19,9 @@ asn:
   - cidr: "198.51.100.0/24"
     asn: 65002
     org: "TEST-ASN-2"
+  - cidr: "2001:db8:1::/64"
+    asn: 65101
+    org: "TEST-ASN-IPv6-1"
+  - cidr: "2001:db8:2::/64"
+    asn: 65102
+    org: "TEST-ASN-IPv6-2"
