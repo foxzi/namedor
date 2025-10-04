@@ -90,6 +90,17 @@ Development
 - Build only main: `go build ./cmd/smaillgeodns`
 - Lint/format: follow project defaults (no external config added yet)
 
+Makefile
+- Build server: `make build`
+- Run with config: `make run CFG=config.yaml`
+- All tests: `make test-all`
+- Unit + integration: `make test`
+- GeoDNS tests: `make test-geo`
+- Synthetic MMDB tests: `make test-synth` (sets `GEOIP_SYNTH=1`)
+- Build mmdbgen: `make mmdbgen`
+- Generate localhost MMDBs: `make mmdb-localhost`
+- Generate from spec: `make mmdb SPEC=examples/geoip/spec.yaml CITY_OUT=./geoipdb/city.mmdb ASN_OUT=./geoipdb/asn.mmdb`
+
 Config Reference
 - `auto_soa_on_missing`: if true, при отсутствии SOA в зоне автоматически создаётся дефолтная запись SOA:
   - MNAME: `ns1.<zone>.`, RNAME: `hostmaster.<zone>.`
