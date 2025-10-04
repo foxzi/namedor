@@ -1,0 +1,25 @@
+# Binaries
+/smaillgeodns
+
+# Databases and data
+*.db
+*.sqlite
+*.sqlite3
+
+# GeoIP databases
+*.mmdb
+/geoipdb/
+
+# Go artifacts
+/bin/
+/dist/
+/build/
+*.test
+*.out
+
+# Editors/OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
