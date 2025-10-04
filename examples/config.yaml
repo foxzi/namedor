@@ -1,0 +1,23 @@
+listen: ":5353"
+forwarder: "8.8.8.8"
+enable_dnssec: false
+api_token: "devtoken"
+rest_listen: ":7070"
+auto_soa_on_missing: true
+default_ttl: 300
+
+db:
+  driver: "sqlite"
+  dsn: "file:smaillgeodns.db?_foreign_keys=on"
+
+geoip:
+  enabled: false
+  mmdb_path: "./geoipdb/geolite2-city-ipv4.mmdb"
+  reload_sec: 300
+  use_ecs: true
+
+update:
+  enabled: true
+  require_tsig: true
+  tsig_secrets:
+    keyname.example.: "base64-hmac-secret=="

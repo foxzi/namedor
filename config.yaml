@@ -1,0 +1,22 @@
+listen: "127.0.0.1:8053"
+forwarder: ""
+enable_dnssec: false
+api_token: "devtoken"
+rest_listen: "127.0.0.1:18080"
+auto_soa_on_missing: true
+default_ttl: 300
+
+db:
+  driver: "sqlite"
+  dsn: "file:smaillgeodns_dev.db?_foreign_keys=on"
+
+geoip:
+  enabled: false
+  mmdb_path: ""
+  reload_sec: 300
+  use_ecs: true
+
+update:
+  enabled: true
+  require_tsig: false
+  tsig_secrets: {}

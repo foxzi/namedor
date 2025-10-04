@@ -1,6 +1,9 @@
 # Binaries
 /smaillgeodns
 
+# AI settings
+.claude/
+
 # Databases and data
 *.db
 *.sqlite
@@ -23,3 +26,4 @@
 .vscode/
 *.swp
 *.swo
+
