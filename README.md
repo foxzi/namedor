@@ -32,6 +32,9 @@ geoip:
   mmdb_path: "/var/lib/maxmind/GeoLite2-City.mmdb"
   reload_sec: 300
   use_ecs: true
+
+log:
+  dns_verbose: true
 ```
 
 2) Build and run:
@@ -47,6 +50,14 @@ REST API (Bearer devtoken)
 Notes
 - DNSSEC dynamic signing is not implemented yet. You can store DNSSEC records (DNSKEY/RRSIG/DS) in DB and serve them as-is when queried.
 - Geo selection currently supports subnet/country/continent attributes on records. ASN requires GeoIP DB integration and is a TODO.
+
+GeoIP
+- Enable in config:
+  - `geoip.enabled: true`
+  - `geoip.mmdb_path: <path to .mmdb file or directory>`
+  - `geoip.use_ecs: true` to honor EDNS Client Subnet
+- File naming: server scans directory and detects DB type by metadata; you can name files e.g. `GeoLite2-City.mmdb`, `GeoLite2-ASN.mmdb`, or `city-ipv4.mmdb`, `city-ipv6.mmdb`, `asn-ipv4.mmdb`, `asn-ipv6.mmdb`. A single City file is applied to both IPv4/IPv6.
+- Logs: on startup, server logs which GeoIP DBs are loaded; if none found or unreadable, it logs an error and disables GeoDNS.
 
 Dynamic Updates (RFC 2136)
 - Enable via config `update.enabled: true`. Optionally enforce TSIG: `update.require_tsig: true`.

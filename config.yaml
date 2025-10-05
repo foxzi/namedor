@@ -11,8 +11,8 @@ db:
   dsn: "file:smaillgeodns_dev.db?_foreign_keys=on"
 
 geoip:
-  enabled: false
-  mmdb_path: ""
+  enabled: true
+  mmdb_path: "./geoipdb"
   reload_sec: 300
   use_ecs: true
 

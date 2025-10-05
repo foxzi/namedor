@@ -106,6 +106,8 @@ func TestGeoDNS_SyntheticMMDB(t *testing.T) {
     _ = json.NewDecoder(rresp.Body).Decode(&zr); rresp.Body.Close()
 
     body := `{"name":"svc","type":"A","ttl":60,"records":[
+        {"data":"203.0.113.21","subnet":"127.0.1.0/24"},
+        {"data":"203.0.113.22","subnet":"127.0.2.0/24"},
         {"data":"203.0.113.10","asn":65001},
         {"data":"203.0.113.14","asn":65002},
         {"data":"203.0.113.11","country":"RU"},
@@ -121,12 +123,12 @@ func TestGeoDNS_SyntheticMMDB(t *testing.T) {
 
     // ECS with 127.0.1.1 (RU by our synthetic DB, ASN 65001) must pick ASN-specific first
     ecsA := netip.MustParseAddr("127.0.1.1")
-    wantA := "203.0.113.10"
+    wantA := "203.0.113.21"
     assertDNSAnswer(t, dnsAddr, "svc.localgeo.test.", ecsA, wantA)
 
-    // ECS with 127.0.2.1 (GB by our synthetic DB, ASN 65002) must pick ASN-specific record
+    // ECS with 127.0.2.1 should match subnet priority
     ecsB := netip.MustParseAddr("127.0.2.1")
-    wantB := "203.0.113.14"
+    wantB := "203.0.113.22"
     assertDNSAnswer(t, dnsAddr, "svc.localgeo.test.", ecsB, wantB)
 
     _ = dnsServer.Shutdown()
@@ -200,8 +202,10 @@ func TestGeoDNS_SyntheticMMDB_IPv6(t *testing.T) {
     if rresp.StatusCode != http.StatusCreated { t.Fatalf("zone status %d", rresp.StatusCode) }
     _ = json.NewDecoder(rresp.Body).Decode(&zr); rresp.Body.Close()
 
-    // AAAA rrset with ASN/country/generic
+    // AAAA rrset with subnet/ASN/country/generic
     body := `{"name":"svc","type":"AAAA","ttl":60,"records":[
+        {"data":"2001:db8:100::21","subnet":"2001:db8:1::/64"},
+        {"data":"2001:db8:100::22","subnet":"2001:db8:2::/64"},
         {"data":"2001:db8:100::10","asn":65101},
         {"data":"2001:db8:100::14","asn":65102},
         {"data":"2001:db8:100::11","country":"RU"},
@@ -215,8 +219,8 @@ func TestGeoDNS_SyntheticMMDB_IPv6(t *testing.T) {
     if rresp2.StatusCode != http.StatusCreated { t.Fatalf("rrset status %d", rresp2.StatusCode) }
     rresp2.Body.Close()
 
-    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:1::1"), "2001:db8:100::10")
-    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:2::1"), "2001:db8:100::14")
+    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:1::1"), "2001:db8:100::21")
+    assertDNSAnswerAAAA(t, dnsAddr, "svc.localgeo6.test.", netip.MustParseAddr("2001:db8:2::1"), "2001:db8:100::22")
 
     _ = dnsServer.Shutdown()
 }

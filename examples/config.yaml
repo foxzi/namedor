@@ -11,10 +11,13 @@ db:
   dsn: "file:smaillgeodns.db?_foreign_keys=on"
 
 geoip:
-  enabled: false
+  enabled: true
   mmdb_path: "./geoipdb/geolite2-city-ipv4.mmdb"
   reload_sec: 300
   use_ecs: true
+
+log:
+  dns_verbose: true
 
 update:
   enabled: true

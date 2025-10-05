@@ -26,6 +26,8 @@ type Server struct {
     resolver  *dns.Client
     cache     *cache.Cache
     geo       geoip.Provider
+    geoStop   func()
+    lastRule  string
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
@@ -37,8 +39,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
     }
     // GeoIP provider
     if cfg.GeoIP.Enabled && cfg.GeoIP.MMDBPath != "" {
-        prov, _, _ := geoip.NewFromPath(cfg.GeoIP.MMDBPath, time.Duration(cfg.GeoIP.ReloadSec)*time.Second)
-        s.geo = prov
+        prov, stop, err := geoip.NewFromPath(cfg.GeoIP.MMDBPath, time.Duration(cfg.GeoIP.ReloadSec)*time.Second)
+        if err != nil {
+            log.Printf("GeoIP: %v; disabling GeoDNS", err)
+            s.geo = geoip.NewNoop()
+        } else {
+            s.geo = prov
+            s.geoStop = stop
+        }
     } else {
         s.geo = geoip.NewNoop()
     }
@@ -72,12 +80,21 @@ func (s *Server) Shutdown() error {
     if s.tcpServer != nil {
         _ = s.tcpServer.ShutdownContext(ctx)
     }
+    if s.geoStop != nil {
+        s.geoStop()
+    }
     return nil
 }
 
 func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
     // Dynamic update
     if r.Opcode == dns.OpcodeUpdate {
+        if len(r.Question) > 0 {
+            q := r.Question[0]
+            log.Printf("DNS UPDATE zone=%s from=%s id=%d", q.Name, w.RemoteAddr(), r.Id)
+        } else {
+            log.Printf("DNS UPDATE from=%s id=%d", w.RemoteAddr(), r.Id)
+        }
         s.handleUpdate(w, r)
         return
     }
@@ -90,11 +107,33 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
         return
     }
     q := r.Question[0]
+    // Determine client IP (ECS or remote) for geo and cache scoping
+    useECS := false
+    if s.cfg != nil {
+        useECS = s.cfg.GeoIP.UseECS
+    }
+    cip := clientIPFrom(r, w, useECS)
+    prov := s.geo
+    if prov == nil {
+        prov = geoip.NewNoop()
+    }
+    ginfo := prov.Lookup(cip)
+    verbose := false
+    if s.cfg != nil {
+        verbose = s.cfg.Log.DNSVerbose
+    }
+    geoStr := ""
+    if verbose {
+        geoStr = fmt.Sprintf(" geo[c=%s,ct=%s,asn=%d]", ginfo.Country, ginfo.Continent, ginfo.ASN)
+    }
 
     // Cache key
-    key := fmt.Sprintf("%s|%d", strings.ToLower(q.Name), q.Qtype)
+    cacheScope := cip.String()
+    if !cip.IsValid() { cacheScope = "" }
+    key := fmt.Sprintf("%s|%d|%s", strings.ToLower(q.Name), q.Qtype, cacheScope)
     if v, ok := s.cache.Get(key); ok {
         if cached, ok2 := v.(*dns.Msg); ok2 {
+            log.Printf("DNS QUERY cache-hit q=%s type=%s from=%s%s id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), geoStr, r.Id)
             resp := cached.Copy()
             // Update transaction ID and question to match current request
             resp.Id = r.Id
@@ -105,9 +144,13 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
     }
 
     // Resolve locally
-    cip := clientIPFrom(r, w, s.cfg.GeoIP.UseECS)
     answers, ttl, err := s.lookup(r, q, cip)
     if err == nil && len(answers) > 0 {
+        if verbose {
+            log.Printf("DNS QUERY q=%s type=%s from=%s ecs=%s%s rule=%s answers=%d ttl=%d id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), cip, geoStr, s.lastRule, len(answers), ttl, r.Id)
+        } else {
+            log.Printf("DNS QUERY q=%s type=%s from=%s answers=%d ttl=%d id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), len(answers), ttl, r.Id)
+        }
         m.Answer = answers
         _ = w.WriteMsg(m)
         if ttl > 0 {
@@ -123,12 +166,14 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
         fwd.SetQuestion(dns.Fqdn(q.Name), q.Qtype)
         in, _, ferr := s.resolver.Exchange(fwd, net.JoinHostPort(s.cfg.Forwarder, "53"))
         if ferr == nil && in != nil {
+            log.Printf("DNS QUERY forward q=%s type=%s to=%s%s rcode=%d id=%d", q.Name, dns.TypeToString[q.Qtype], s.cfg.Forwarder, geoStr, in.Rcode, r.Id)
             in.Id = r.Id
             _ = w.WriteMsg(in)
             return
         }
     }
 
+    log.Printf("DNS QUERY nxdomain q=%s type=%s from=%s%s id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), geoStr, r.Id)
     m.Rcode = dns.RcodeNameError
     _ = w.WriteMsg(m)
 }
@@ -165,7 +210,8 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 
     // Geo selection
     g := s.geo.Lookup(clientIP)
-    recs := selectGeoRecords(set.Records, clientIP, g)
+    recs, rule := selectGeoRecords(set.Records, clientIP, g)
+    s.lastRule = rule
 
     for _, rec := range recs {
         rr, perr := dns.NewRR(fmt.Sprintf("%s %d %s %s", qname, set.TTL, strings.ToUpper(qtype), rec.Data))
@@ -207,9 +253,9 @@ func clientIPFrom(r *dns.Msg, w dns.ResponseWriter, useECS bool) netip.Addr {
 // remapIP maps an IP from one CIDR into another CIDR with the same prefix length.
 // Useful to translate reserved ranges (e.g., 127.0.1.0/24) into TEST-NET for GeoIP lookup.
 
-func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) []dbm.RData {
+func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) ([]dbm.RData, string) {
     if len(recs) == 0 {
-        return recs
+        return recs, "none"
     }
     // If no IP, return generic ones or all
     if !ip.IsValid() {
@@ -220,9 +266,9 @@ func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) []dbm.RData
             }
         }
         if len(out) > 0 {
-            return out
+            return out, "generic"
         }
-        return recs
+        return recs, "all"
     }
     // Priority: subnet > asn > country > continent > default
     var subnetMatch, asnMatch, countryMatch, continentMatch, generic []dbm.RData
@@ -252,21 +298,21 @@ func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) []dbm.RData
         }
     }
     if len(subnetMatch) > 0 {
-        return subnetMatch
+        return subnetMatch, "subnet"
     }
     if len(asnMatch) > 0 {
-        return asnMatch
+        return asnMatch, "asn"
     }
     if len(countryMatch) > 0 {
-        return countryMatch
+        return countryMatch, "country"
     }
     if len(continentMatch) > 0 {
-        return continentMatch
+        return continentMatch, "continent"
     }
     if len(generic) > 0 {
-        return generic
+        return generic, "generic"
     }
-    return recs
+    return recs, "all"
 }
 
 // handleUpdate processes RFC 2136 dynamic updates (basic ADD/DELETE semantics).

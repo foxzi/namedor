@@ -2,6 +2,8 @@ package geoip
 
 import (
     "errors"
+    "fmt"
+    "log"
     "net/netip"
     "os"
     "path/filepath"
@@ -52,7 +54,7 @@ func NewFromPath(path string, reload time.Duration) (Provider, func(), error) {
 
         fi, err := os.Stat(path)
         if err != nil {
-            return err
+            return fmt.Errorf("stat %s: %w", path, err)
         }
         if fi.IsDir() {
             entries, err := os.ReadDir(path)
@@ -68,9 +70,9 @@ func NewFromPath(path string, reload time.Duration) (Provider, func(), error) {
                 is6 := strings.Contains(name, "ipv6")
                 isASN := strings.Contains(t, "asn") || strings.Contains(name, "asn")
                 if isASN {
-                    if is6 { m.asn6.Store(r) } else { m.asn4.Store(r) }
+                    if is6 { m.asn6.Store(r); log.Printf("GeoIP: loaded ASN IPv6 DB %s", full) } else { m.asn4.Store(r); log.Printf("GeoIP: loaded ASN IPv4 DB %s", full) }
                 } else {
-                    if is6 { m.city6.Store(r) } else { m.city4.Store(r) }
+                    if is6 { m.city6.Store(r); log.Printf("GeoIP: loaded City IPv6 DB %s", full) } else { m.city4.Store(r); log.Printf("GeoIP: loaded City IPv4 DB %s", full) }
                 }
             }
             // if none loaded, fallback error
@@ -79,17 +81,18 @@ func NewFromPath(path string, reload time.Duration) (Provider, func(), error) {
             }
         } else {
             r, err := geoip2.Open(path)
-            if err != nil { return err }
+            if err != nil { return fmt.Errorf("open %s: %w", path, err) }
             // Use as both city4 and city6
             m.city4.Store(r)
             m.city6.Store(r)
+            log.Printf("GeoIP: loaded City DB %s for IPv4/IPv6", path)
         }
         return nil
     }
 
     if err := load(); err != nil {
-        // degrade to noop if cannot load
-        return NewNoop(), func() {}, nil
+        // degrade to noop if cannot load but return error for logging upstream
+        return NewNoop(), func() {}, err
     }
     stop := make(chan struct{})
     go func() {

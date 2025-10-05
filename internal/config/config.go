@@ -19,6 +19,10 @@ type GeoIPConfig struct {
     UseECS    bool   `yaml:"use_ecs"`
 }
 
+type LogConfig struct {
+    DNSVerbose bool `yaml:"dns_verbose"`
+}
+
 type UpdateConfig struct {
     Enabled     bool              `yaml:"enabled"`
     RequireTSIG bool              `yaml:"require_tsig"`
@@ -37,6 +41,7 @@ type Config struct {
     DB    DBConfig    `yaml:"db"`
     GeoIP GeoIPConfig `yaml:"geoip"`
     Update UpdateConfig `yaml:"update"`
+    Log   LogConfig   `yaml:"log"`
 }
 
 func Load(path string) (*Config, error) {

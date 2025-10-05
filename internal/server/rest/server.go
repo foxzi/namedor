@@ -2,6 +2,7 @@ package rest
 
 import (
     "context"
+    "fmt"
     "net/http"
     "strings"
 
@@ -22,6 +23,16 @@ type Server struct {
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
     gin.SetMode(gin.ReleaseMode)
     r := gin.New()
+    // Log all API requests to stdout
+    r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+        return fmt.Sprintf("API %s %s %d %s from %s\n",
+            param.Method,
+            param.Path,
+            param.StatusCode,
+            param.Latency,
+            param.ClientIP,
+        )
+    }))
     r.Use(gin.Recovery())
 
     s := &Server{cfg: cfg, db: db, r: r}
