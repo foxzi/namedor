@@ -45,7 +45,7 @@ type AdminConfig struct {
 }
 
 type ReplicationConfig struct {
-    Mode            string `yaml:"mode"`             // "master", "slave", or "" (disabled)
+    Mode            string `yaml:"mode"`             // "master", "slave", "standalone", or "" (disabled)
     MasterURL       string `yaml:"master_url"`       // URL of master server (for slave mode)
     SyncIntervalSec int    `yaml:"sync_interval_sec"` // Sync interval in seconds (for slave mode)
     APIToken        string `yaml:"api_token"`        // API token for master authentication
@@ -173,8 +173,8 @@ func (c *Config) Validate() error {
     }
 
     // Validate replication config
-    if c.Replication.Mode != "" && c.Replication.Mode != "master" && c.Replication.Mode != "slave" {
-        return fmt.Errorf("replication.mode must be 'master', 'slave', or empty (got '%s')", c.Replication.Mode)
+    if c.Replication.Mode != "" && c.Replication.Mode != "master" && c.Replication.Mode != "slave" && c.Replication.Mode != "standalone" {
+        return fmt.Errorf("replication.mode must be 'master', 'slave', 'standalone', or empty (got '%s')", c.Replication.Mode)
     }
     if c.Replication.Mode == "slave" {
         if c.Replication.MasterURL == "" {
