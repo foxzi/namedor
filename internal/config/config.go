@@ -2,7 +2,10 @@ package config
 
 import (
     "fmt"
+    "net"
     "os"
+    "strconv"
+    "strings"
 
     "gopkg.in/yaml.v3"
 )
@@ -29,6 +32,12 @@ type UpdateConfig struct {
     TSIGSecrets map[string]string `yaml:"tsig_secrets"`
 }
 
+type PerformanceConfig struct {
+    CacheSize          int `yaml:"cache_size"`
+    DNSTimeoutSec      int `yaml:"dns_timeout_sec"`
+    ForwarderTimeoutSec int `yaml:"forwarder_timeout_sec"`
+}
+
 type Config struct {
     Listen       string     `yaml:"listen"`
     Forwarder    string     `yaml:"forwarder"`
@@ -38,10 +47,11 @@ type Config struct {
     AutoSOAOnMissing bool   `yaml:"auto_soa_on_missing"`
     DefaultTTL   uint32     `yaml:"default_ttl"`
 
-    DB    DBConfig    `yaml:"db"`
-    GeoIP GeoIPConfig `yaml:"geoip"`
-    Update UpdateConfig `yaml:"update"`
-    Log   LogConfig   `yaml:"log"`
+    DB          DBConfig          `yaml:"db"`
+    GeoIP       GeoIPConfig       `yaml:"geoip"`
+    Update      UpdateConfig      `yaml:"update"`
+    Log         LogConfig         `yaml:"log"`
+    Performance PerformanceConfig `yaml:"performance"`
 }
 
 func Load(path string) (*Config, error) {
@@ -53,11 +63,128 @@ func Load(path string) (*Config, error) {
     if err := yaml.Unmarshal(b, &cfg); err != nil {
         return nil, fmt.Errorf("parse yaml: %w", err)
     }
+
+    // Apply defaults
     if cfg.RESTListen == "" {
         cfg.RESTListen = ":8080"
     }
     if cfg.Listen == "" {
         cfg.Listen = ":53"
     }
+    if cfg.Performance.CacheSize == 0 {
+        cfg.Performance.CacheSize = 1024
+    }
+    if cfg.Performance.DNSTimeoutSec == 0 {
+        cfg.Performance.DNSTimeoutSec = 2
+    }
+    if cfg.Performance.ForwarderTimeoutSec == 0 {
+        cfg.Performance.ForwarderTimeoutSec = 2
+    }
+
+    // Validate
+    if err := cfg.Validate(); err != nil {
+        return nil, fmt.Errorf("config validation: %w", err)
+    }
+
     return &cfg, nil
+}
+
+// Validate checks configuration for correctness
+func (c *Config) Validate() error {
+    // Validate DNS listen address
+    if err := validateAddr(c.Listen); err != nil {
+        return fmt.Errorf("invalid listen address: %w", err)
+    }
+
+    // Validate REST listen address
+    if err := validateAddr(c.RESTListen); err != nil {
+        return fmt.Errorf("invalid rest_listen address: %w", err)
+    }
+
+    // Validate forwarder if set
+    if c.Forwarder != "" {
+        if err := validateHost(c.Forwarder); err != nil {
+            return fmt.Errorf("invalid forwarder address: %w", err)
+        }
+    }
+
+    // Validate DB config
+    if c.DB.Driver == "" {
+        return fmt.Errorf("db.driver is required")
+    }
+    if c.DB.DSN == "" {
+        return fmt.Errorf("db.dsn is required")
+    }
+
+    // Validate GeoIP config
+    if c.GeoIP.Enabled && c.GeoIP.MMDBPath == "" {
+        return fmt.Errorf("geoip.mmdb_path is required when geoip is enabled")
+    }
+    if c.GeoIP.Enabled && c.GeoIP.MMDBPath != "" {
+        if _, err := os.Stat(c.GeoIP.MMDBPath); err != nil {
+            return fmt.Errorf("geoip.mmdb_path: %w", err)
+        }
+    }
+
+    // Validate performance limits
+    if c.Performance.CacheSize < 0 {
+        return fmt.Errorf("performance.cache_size must be >= 0")
+    }
+    if c.Performance.DNSTimeoutSec <= 0 {
+        return fmt.Errorf("performance.dns_timeout_sec must be > 0")
+    }
+    if c.Performance.ForwarderTimeoutSec <= 0 {
+        return fmt.Errorf("performance.forwarder_timeout_sec must be > 0")
+    }
+
+    // Warn if API token is weak (optional, non-fatal)
+    if c.APIToken != "" && len(c.APIToken) < 8 {
+        fmt.Fprintf(os.Stderr, "WARNING: api_token is shorter than 8 characters, consider using a stronger token\n")
+    }
+
+    return nil
+}
+
+// validateAddr validates host:port address format
+func validateAddr(addr string) error {
+    host, portStr, err := net.SplitHostPort(addr)
+    if err != nil {
+        return err
+    }
+
+    // Validate port
+    port, err := strconv.Atoi(portStr)
+    if err != nil {
+        return fmt.Errorf("invalid port: %w", err)
+    }
+    if port < 1 || port > 65535 {
+        return fmt.Errorf("port must be between 1 and 65535, got %d", port)
+    }
+
+    // Validate host (empty means all interfaces, which is valid)
+    if host != "" {
+        if ip := net.ParseIP(host); ip == nil {
+            // Not an IP, could be hostname - allow it
+            if strings.Contains(host, " ") {
+                return fmt.Errorf("invalid host: contains spaces")
+            }
+        }
+    }
+
+    return nil
+}
+
+// validateHost validates IP or hostname (without port)
+func validateHost(addr string) error {
+    // Check if it's an IP
+    if ip := net.ParseIP(addr); ip != nil {
+        return nil
+    }
+
+    // Check if it's a valid hostname
+    if addr == "" || strings.Contains(addr, " ") {
+        return fmt.Errorf("invalid hostname")
+    }
+
+    return nil
 }

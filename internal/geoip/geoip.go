@@ -67,15 +67,48 @@ func NewFromPath(path string, reload time.Duration) (Provider, func(), error) {
                 if err != nil { continue }
                 t := strings.ToLower(r.Metadata().DatabaseType)
                 name := strings.ToLower(e.Name())
-                is6 := strings.Contains(name, "ipv6")
+                // Detect IPv6 hint in filename: ipv6, -6, _6, -v6, .6.mmdb
+                is6Hint := strings.Contains(name, "ipv6") || strings.Contains(name, "-6") ||
+                           strings.Contains(name, "_6") || strings.Contains(name, "-v6") ||
+                           strings.HasSuffix(name, "6.mmdb")
                 isASN := strings.Contains(t, "asn") || strings.Contains(name, "asn")
                 if isASN {
-                    if is6 { m.asn6.Store(r); log.Printf("GeoIP: loaded ASN IPv6 DB %s", full) } else { m.asn4.Store(r); log.Printf("GeoIP: loaded ASN IPv4 DB %s", full) }
+                    if is6Hint {
+                        m.asn6.Store(r)
+                        log.Printf("GeoIP: loaded ASN IPv6 DB %s", full)
+                    } else {
+                        m.asn4.Store(r)
+                        log.Printf("GeoIP: loaded ASN IPv4 DB %s", full)
+                    }
                 } else {
-                    if is6 { m.city6.Store(r); log.Printf("GeoIP: loaded City IPv6 DB %s", full) } else { m.city4.Store(r); log.Printf("GeoIP: loaded City IPv4 DB %s", full) }
+                    if is6Hint {
+                        m.city6.Store(r)
+                        log.Printf("GeoIP: loaded City IPv6 DB %s", full)
+                    } else {
+                        m.city4.Store(r)
+                        log.Printf("GeoIP: loaded City IPv4 DB %s", full)
+                    }
                 }
             }
-            // if none loaded, fallback error
+            // Universal MMDB (IPVersion=6) supports both IPv4+IPv6
+            // Use loaded DBs as fallback for missing IP version
+            if m.city4.Load() == nil && m.city6.Load() != nil {
+                m.city4.Store(m.city6.Load())
+                log.Printf("GeoIP: using IPv6 City DB as fallback for IPv4")
+            }
+            if m.city6.Load() == nil && m.city4.Load() != nil {
+                m.city6.Store(m.city4.Load())
+                log.Printf("GeoIP: using IPv4 City DB as fallback for IPv6")
+            }
+            if m.asn4.Load() == nil && m.asn6.Load() != nil {
+                m.asn4.Store(m.asn6.Load())
+                log.Printf("GeoIP: using IPv6 ASN DB as fallback for IPv4")
+            }
+            if m.asn6.Load() == nil && m.asn4.Load() != nil {
+                m.asn6.Store(m.asn4.Load())
+                log.Printf("GeoIP: using IPv4 ASN DB as fallback for IPv6")
+            }
+            // if none loaded, error
             if m.city4.Load() == nil && m.city6.Load() == nil && m.asn4.Load() == nil && m.asn6.Load() == nil {
                 return errors.New("no geoip databases loaded")
             }

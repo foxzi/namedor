@@ -37,6 +37,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
     s := &Server{cfg: cfg, db: db, r: r}
 
+    // Public endpoints (no auth)
+    r.GET("/health", s.health)
+
     auth := func(c *gin.Context) {
         token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
         if s.cfg.APIToken != "" && token != s.cfg.APIToken {
@@ -77,6 +80,33 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 // Handlers
+
+// health returns server health status
+func (s *Server) health(c *gin.Context) {
+    status := "ok"
+    dbStatus := "ok"
+
+    // Check database connectivity
+    sqlDB, err := s.db.DB()
+    if err != nil {
+        dbStatus = "error"
+        status = "degraded"
+    } else if err := sqlDB.Ping(); err != nil {
+        dbStatus = "unreachable"
+        status = "degraded"
+    }
+
+    response := gin.H{
+        "status": status,
+        "db":     dbStatus,
+    }
+
+    if status == "ok" {
+        c.JSON(http.StatusOK, response)
+    } else {
+        c.JSON(http.StatusServiceUnavailable, response)
+    }
+}
 
 type zoneReq struct {
     Name string `json:"name"`

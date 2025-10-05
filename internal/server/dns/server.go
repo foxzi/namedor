@@ -34,8 +34,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
     s := &Server{
         cfg:      cfg,
         db:       db,
-        resolver: &dns.Client{Timeout: 2 * time.Second},
-        cache:    cache.New(1024),
+        resolver: &dns.Client{Timeout: time.Duration(cfg.Performance.ForwarderTimeoutSec) * time.Second},
+        cache:    cache.New(cfg.Performance.CacheSize),
     }
     // GeoIP provider
     if cfg.GeoIP.Enabled && cfg.GeoIP.MMDBPath != "" {
