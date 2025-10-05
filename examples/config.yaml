@@ -29,3 +29,8 @@ performance:
   cache_size: 2048
   dns_timeout_sec: 5
   forwarder_timeout_sec: 3
+
+admin:
+  enabled: false  # Set to true to enable web admin panel
+  username: admin
+  password_hash: ""  # Generate with: go run cmd/hashpwd/main.go yourPassword

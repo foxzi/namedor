@@ -28,3 +28,8 @@ performance:
   cache_size: 1024
   dns_timeout_sec: 2
   forwarder_timeout_sec: 2
+
+admin:
+  enabled: true
+  username: admin
+  password_hash: "$2a$10$0WB2kBhwpbU9.nmxVD2qs.4.1cz9vxrI8Vd58X7arA1rzp57B5zfW"

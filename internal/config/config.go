@@ -38,6 +38,12 @@ type PerformanceConfig struct {
     ForwarderTimeoutSec int `yaml:"forwarder_timeout_sec"`
 }
 
+type AdminConfig struct {
+    Enabled      bool   `yaml:"enabled"`
+    Username     string `yaml:"username"`
+    PasswordHash string `yaml:"password_hash"` // bcrypt hash
+}
+
 type Config struct {
     Listen       string     `yaml:"listen"`
     Forwarder    string     `yaml:"forwarder"`
@@ -52,6 +58,7 @@ type Config struct {
     Update      UpdateConfig      `yaml:"update"`
     Log         LogConfig         `yaml:"log"`
     Performance PerformanceConfig `yaml:"performance"`
+    Admin       AdminConfig       `yaml:"admin"`
 }
 
 func Load(path string) (*Config, error) {

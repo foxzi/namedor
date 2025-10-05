@@ -28,3 +28,9 @@ performance:
   cache_size: 2048
   dns_timeout_sec: 5
   forwarder_timeout_sec: 3
+
+admin:
+  enabled: true
+  username: admin
+  # Default password: admin (CHANGE THIS IN PRODUCTION!)
+  password_hash: "$2a$10$0WB2kBhwpbU9.nmxVD2qs.4.1cz9vxrI8Vd58X7arA1rzp57B5zfW"

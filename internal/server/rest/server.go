@@ -3,6 +3,7 @@ package rest
 import (
     "context"
     "fmt"
+    "log"
     "net/http"
     "strings"
 
@@ -12,6 +13,7 @@ import (
     "smaillgeodns/internal/config"
     dbm "smaillgeodns/internal/db"
     "smaillgeodns/internal/server/rest/zoneio"
+    "smaillgeodns/internal/web"
 )
 
 type Server struct {
@@ -39,6 +41,15 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
     // Public endpoints (no auth)
     r.GET("/health", s.health)
+
+    // Web Admin UI
+    webAdmin, err := web.NewServer(cfg, db)
+    if err != nil {
+        log.Printf("Web admin initialization error: %v", err)
+    } else if webAdmin != nil {
+        webAdmin.RegisterRoutes(r)
+        log.Printf("Web admin panel enabled at /admin")
+    }
 
     auth := func(c *gin.Context) {
         token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")

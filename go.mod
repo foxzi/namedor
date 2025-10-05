@@ -5,14 +5,15 @@ go 1.24
 toolchain go1.24.7
 
 require (
-    github.com/gin-gonic/gin v1.10.0
-    github.com/miekg/dns v1.1.58
-    github.com/oschwald/geoip2-golang v1.8.0
-    gopkg.in/yaml.v3 v3.0.1
-    gorm.io/driver/mysql v1.5.7
-    gorm.io/driver/postgres v1.5.8
-    gorm.io/driver/sqlite v1.5.6
-    gorm.io/gorm v1.25.10
+	github.com/gin-gonic/gin v1.10.0
+	github.com/miekg/dns v1.1.58
+	github.com/oschwald/geoip2-golang v1.8.0
+	golang.org/x/crypto v0.28.0
+	gopkg.in/yaml.v3 v3.0.1
+	gorm.io/driver/mysql v1.5.7
+	gorm.io/driver/postgres v1.5.8
+	gorm.io/driver/sqlite v1.5.6
+	gorm.io/gorm v1.25.10
 )
 
 require (
@@ -42,14 +43,12 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/oschwald/maxminddb-golang v1.12.0 // indirect
-	github.com/oschwald/maxminddb-golang/v2 v2.0.0-beta.10 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
