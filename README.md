@@ -1,4 +1,4 @@
-SmaillGeoDNS — Lightweight DNS server with REST + GeoDNS
+namedot — Lightweight DNS server with REST + GeoDNS
 
 Overview
 - UDP/TCP DNS on :53
@@ -244,3 +244,7 @@ log:
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
 - `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте и при RFC2136 ADD.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
