@@ -1,0 +1,39 @@
+listen: "0.0.0.0:53"
+forwarder: ""
+enable_dnssec: false
+api_token: "your-secure-token-here"
+rest_listen: "0.0.0.0:8080"
+auto_soa_on_missing: true
+default_ttl: 300
+
+db:
+  driver: "sqlite"
+  dsn: "file:smaillgeodns_master.db?_foreign_keys=on"
+
+geoip:
+  enabled: true
+  mmdb_path: "./geoipdb"
+  reload_sec: 300
+  use_ecs: true
+
+update:
+  enabled: true
+  require_tsig: false
+  tsig_secrets: {}
+
+log:
+  dns_verbose: true
+
+performance:
+  cache_size: 1024
+  dns_timeout_sec: 2
+  forwarder_timeout_sec: 2
+
+admin:
+  enabled: true
+  username: admin
+  password_hash: "$2a$10$0WB2kBhwpbU9.nmxVD2qs.4.1cz9vxrI8Vd58X7arA1rzp57B5zfW"
+
+# Master mode configuration
+replication:
+  mode: "master"
