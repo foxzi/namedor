@@ -1,0 +1,118 @@
+services:
+  # GeoDNS server with SQLite (simplest setup)
+  geodns:
+    build: .
+    container_name: smaillgeodns
+    restart: unless-stopped
+    ports:
+      - "8053:53/udp"
+      - "8053:53/tcp"
+      - "18080:8080/tcp"
+    volumes:
+      - ./config.docker.yaml:/app/config.yaml:ro
+      - geodns-data:/data
+      - ./geoipdb:/app/geoipdb:ro
+    environment:
+      - TZ=UTC
+    networks:
+      - geodns-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Example: GeoDNS with PostgreSQL
+  geodns-postgres:
+    build: .
+    container_name: smaillgeodns-postgres
+    restart: unless-stopped
+    ports:
+      - "8054:53/udp"
+      - "8054:53/tcp"
+      - "18081:8080/tcp"
+    volumes:
+      - ./config.postgres.yaml:/app/config.yaml:ro
+      - ./geoipdb:/app/geoipdb:ro
+    environment:
+      - TZ=UTC
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - geodns-net
+    profiles:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: geodns-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: geodns
+      POSTGRES_USER: geodns
+      POSTGRES_PASSWORD: geodns_secret
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - geodns-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geodns"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - postgres
+
+  # Example: GeoDNS with MySQL
+  geodns-mysql:
+    build: .
+    container_name: smaillgeodns-mysql
+    restart: unless-stopped
+    ports:
+      - "8055:53/udp"
+      - "8055:53/tcp"
+      - "18082:8080/tcp"
+    volumes:
+      - ./config.mysql.yaml:/app/config.yaml:ro
+      - ./geoipdb:/app/geoipdb:ro
+    environment:
+      - TZ=UTC
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - geodns-net
+    profiles:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: geodns-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: geodns
+      MYSQL_USER: geodns
+      MYSQL_PASSWORD: geodns_secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - geodns-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "geodns", "-pgeodens_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - mysql
+
+volumes:
+  geodns-data:
+  postgres-data:
+  mysql-data:
+
+networks:
+  geodns-net:
+    driver: bridge

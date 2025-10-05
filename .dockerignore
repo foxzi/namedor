@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Build artifacts
+smaillgeodns
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Temporary files
+/tmp
+*.log
+*.tmp
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+*_test.go
+testdata/
+
+# Development config
+config.yaml
+tz.md
