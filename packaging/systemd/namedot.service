@@ -1,0 +1,30 @@
+[Unit]
+Description=namedot - Lightweight DNS server with GeoDNS
+Documentation=https://github.com/piligrim/namedot
+After=network.target
+
+[Service]
+Type=simple
+User=namedot
+Group=namedot
+ExecStart=/usr/bin/namedot
+Restart=on-failure
+RestartSec=5s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/namedot /var/log/namedot
+
+# Allow binding to privileged ports (53)
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Environment
+Environment=SGDNS_CONFIG=/etc/namedot/config.yaml
+WorkingDirectory=/var/lib/namedot
+
+[Install]
+WantedBy=multi-user.target

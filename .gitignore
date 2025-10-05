@@ -22,6 +22,11 @@ test_*.db
 *.test
 *.out
 
+# Packages
+*.deb
+*.rpm
+*.tar.gz
+
 # Editors/OS
 .DS_Store
 .idea/
