@@ -10,6 +10,7 @@ import (
 
     "smaillgeodns/internal/config"
     "smaillgeodns/internal/db"
+    "smaillgeodns/internal/replication"
     dnssrv "smaillgeodns/internal/server/dns"
     restsrv "smaillgeodns/internal/server/rest"
 )
@@ -54,6 +55,20 @@ func main() {
             log.Fatalf("rest start: %v", err)
         }
     }()
+
+    // Start replication sync worker for slave mode
+    if cfg.Replication.Mode == "slave" {
+        syncClient := replication.NewSyncClient(cfg, gormDB)
+        go func() {
+            // Wait a bit for REST server to start
+            time.Sleep(2 * time.Second)
+            syncClient.StartPeriodicSync(ctx)
+        }()
+        log.Printf("Slave mode enabled: syncing from %s every %d seconds",
+            cfg.Replication.MasterURL, cfg.Replication.SyncIntervalSec)
+    } else if cfg.Replication.Mode == "master" {
+        log.Println("Master mode enabled: ready to serve replication data")
+    }
 
     // Graceful shutdown
     sigCh := make(chan os.Signal, 1)

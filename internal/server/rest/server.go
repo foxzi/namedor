@@ -76,6 +76,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
         api.GET("/zones/:id/export", s.exportZone)
         api.POST("/zones/:id/import", s.importZone)
+
+        // Replication endpoints
+        api.GET("/sync/export", s.syncExport)
+        api.POST("/sync/import", s.syncImport)
     }
     return s
 }
@@ -358,4 +362,141 @@ func normalizePtr[T ~string](p *T) *string {
     }
     lower := strings.ToUpper(s)
     return &lower
+}
+
+// Sync structures for replication
+type SyncData struct {
+    Zones     []dbm.Zone     `json:"zones"`
+    Templates []dbm.Template `json:"templates"`
+}
+
+// syncExport returns all zones and templates for replication
+func (s *Server) syncExport(c *gin.Context) {
+    var zones []dbm.Zone
+    if err := s.db.Preload("RRSets.Records").Find(&zones).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    var templates []dbm.Template
+    if err := s.db.Preload("Records").Find(&templates).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, SyncData{
+        Zones:     zones,
+        Templates: templates,
+    })
+}
+
+// syncImport imports all zones and templates from master
+func (s *Server) syncImport(c *gin.Context) {
+    var data SyncData
+    if err := c.ShouldBindJSON(&data); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+        return
+    }
+
+    err := s.db.Transaction(func(tx *gorm.DB) error {
+        // Import zones
+        for _, zone := range data.Zones {
+            var existingZone dbm.Zone
+            err := tx.Where("name = ?", zone.Name).First(&existingZone).Error
+
+            if err == gorm.ErrRecordNotFound {
+                // Create new zone
+                newZone := dbm.Zone{
+                    Name: zone.Name,
+                }
+                if err := tx.Create(&newZone).Error; err != nil {
+                    return fmt.Errorf("create zone %s: %w", zone.Name, err)
+                }
+                existingZone = newZone
+            } else if err != nil {
+                return fmt.Errorf("check zone %s: %w", zone.Name, err)
+            }
+
+            // Delete old rrsets for this zone
+            if err := tx.Where("zone_id = ?", existingZone.ID).Delete(&dbm.RRSet{}).Error; err != nil {
+                return fmt.Errorf("delete old rrsets for zone %s: %w", zone.Name, err)
+            }
+
+            // Create new rrsets
+            for _, rrset := range zone.RRSets {
+                newRRSet := dbm.RRSet{
+                    ZoneID:  existingZone.ID,
+                    Name:    rrset.Name,
+                    Type:    rrset.Type,
+                    TTL:     rrset.TTL,
+                    Records: rrset.Records,
+                }
+                // Clear IDs to avoid conflicts
+                for i := range newRRSet.Records {
+                    newRRSet.Records[i].ID = 0
+                }
+                if err := tx.Create(&newRRSet).Error; err != nil {
+                    return fmt.Errorf("create rrset %s/%s: %w", zone.Name, rrset.Name, err)
+                }
+            }
+        }
+
+        // Import templates
+        for _, tmpl := range data.Templates {
+            var existingTmpl dbm.Template
+            err := tx.Where("name = ?", tmpl.Name).First(&existingTmpl).Error
+
+            if err == gorm.ErrRecordNotFound {
+                // Create new template
+                newTmpl := dbm.Template{
+                    Name:        tmpl.Name,
+                    Description: tmpl.Description,
+                }
+                if err := tx.Create(&newTmpl).Error; err != nil {
+                    return fmt.Errorf("create template %s: %w", tmpl.Name, err)
+                }
+                existingTmpl = newTmpl
+            } else if err != nil {
+                return fmt.Errorf("check template %s: %w", tmpl.Name, err)
+            } else {
+                // Update existing template
+                existingTmpl.Description = tmpl.Description
+                if err := tx.Save(&existingTmpl).Error; err != nil {
+                    return fmt.Errorf("update template %s: %w", tmpl.Name, err)
+                }
+            }
+
+            // Delete old template records
+            if err := tx.Where("template_id = ?", existingTmpl.ID).Delete(&dbm.TemplateRecord{}).Error; err != nil {
+                return fmt.Errorf("delete old records for template %s: %w", tmpl.Name, err)
+            }
+
+            // Create new template records
+            for _, rec := range tmpl.Records {
+                newRec := dbm.TemplateRecord{
+                    TemplateID: existingTmpl.ID,
+                    Name:       rec.Name,
+                    Type:       rec.Type,
+                    TTL:        rec.TTL,
+                    Data:       rec.Data,
+                    Country:    rec.Country,
+                    Continent:  rec.Continent,
+                    ASN:        rec.ASN,
+                    Subnet:     rec.Subnet,
+                }
+                if err := tx.Create(&newRec).Error; err != nil {
+                    return fmt.Errorf("create template record for %s: %w", tmpl.Name, err)
+                }
+            }
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"status": "ok", "zones": len(data.Zones), "templates": len(data.Templates)})
 }

@@ -44,6 +44,13 @@ type AdminConfig struct {
     PasswordHash string `yaml:"password_hash"` // bcrypt hash
 }
 
+type ReplicationConfig struct {
+    Mode            string `yaml:"mode"`             // "master", "slave", or "" (disabled)
+    MasterURL       string `yaml:"master_url"`       // URL of master server (for slave mode)
+    SyncIntervalSec int    `yaml:"sync_interval_sec"` // Sync interval in seconds (for slave mode)
+    APIToken        string `yaml:"api_token"`        // API token for master authentication
+}
+
 type Config struct {
     Listen       string     `yaml:"listen"`
     Forwarder    string     `yaml:"forwarder"`
@@ -59,6 +66,7 @@ type Config struct {
     Log         LogConfig         `yaml:"log"`
     Performance PerformanceConfig `yaml:"performance"`
     Admin       AdminConfig       `yaml:"admin"`
+    Replication ReplicationConfig `yaml:"replication"`
 }
 
 func Load(path string) (*Config, error) {
@@ -86,6 +94,21 @@ func Load(path string) (*Config, error) {
     }
     if cfg.Performance.ForwarderTimeoutSec == 0 {
         cfg.Performance.ForwarderTimeoutSec = 2
+    }
+    if cfg.Replication.SyncIntervalSec == 0 && cfg.Replication.Mode == "slave" {
+        cfg.Replication.SyncIntervalSec = 60 // Default: 60 seconds
+    }
+
+    // Auto-disable modifications on slave servers
+    if cfg.Replication.Mode == "slave" {
+        if cfg.Admin.Enabled {
+            fmt.Fprintf(os.Stderr, "INFO: Admin panel automatically disabled in slave mode\n")
+            cfg.Admin.Enabled = false
+        }
+        if cfg.Update.Enabled {
+            fmt.Fprintf(os.Stderr, "INFO: DNS updates automatically disabled in slave mode\n")
+            cfg.Update.Enabled = false
+        }
     }
 
     // Validate
@@ -147,6 +170,19 @@ func (c *Config) Validate() error {
     // Warn if API token is weak (optional, non-fatal)
     if c.APIToken != "" && len(c.APIToken) < 8 {
         fmt.Fprintf(os.Stderr, "WARNING: api_token is shorter than 8 characters, consider using a stronger token\n")
+    }
+
+    // Validate replication config
+    if c.Replication.Mode != "" && c.Replication.Mode != "master" && c.Replication.Mode != "slave" {
+        return fmt.Errorf("replication.mode must be 'master', 'slave', or empty (got '%s')", c.Replication.Mode)
+    }
+    if c.Replication.Mode == "slave" {
+        if c.Replication.MasterURL == "" {
+            return fmt.Errorf("replication.master_url is required when replication.mode is 'slave'")
+        }
+        if c.Replication.SyncIntervalSec <= 0 {
+            return fmt.Errorf("replication.sync_interval_sec must be > 0 when replication.mode is 'slave'")
+        }
     }
 
     return nil
