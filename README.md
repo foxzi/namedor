@@ -9,6 +9,44 @@ Overview
 - Simple in-memory TTL cache
 - Master-Slave replication via REST API
 
+Installation
+
+### From Package Repository
+
+#### Debian/Ubuntu (APT)
+```bash
+# Add repository
+echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+
+# Update and install
+sudo apt-get update
+sudo apt-get install namedot
+
+# Start service
+sudo systemctl enable namedot
+sudo systemctl start namedot
+```
+
+#### RHEL/CentOS/Fedora (YUM/DNF)
+```bash
+# Add repository
+sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+
+# Install
+sudo yum install namedot
+# or
+sudo dnf install namedot
+
+# Start service
+sudo systemctl enable namedot
+sudo systemctl start namedot
+```
+
+#### Manual Download
+Download DEB/RPM packages from [Releases](https://github.com/piligrim/namedot/releases)
+
+### From Source
+
 Requirements
 - Go >= 1.23 (рекомендуется 1.24+)
 
@@ -134,6 +172,44 @@ SmaillGeoDNS — Легковесный DNS-сервер с REST API + GeoDNS
 - Опциональный форвардер при отсутствии записи в кеше
 - Простой in-memory TTL кеш
 - Master-Slave репликация через REST API
+
+## Установка
+
+### Из репозитория пакетов
+
+#### Debian/Ubuntu (APT)
+```bash
+# Добавить репозиторий
+echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+
+# Обновить и установить
+sudo apt-get update
+sudo apt-get install namedot
+
+# Запустить сервис
+sudo systemctl enable namedot
+sudo systemctl start namedot
+```
+
+#### RHEL/CentOS/Fedora (YUM/DNF)
+```bash
+# Добавить репозиторий
+sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+
+# Установить
+sudo yum install namedot
+# или
+sudo dnf install namedot
+
+# Запустить сервис
+sudo systemctl enable namedot
+sudo systemctl start namedot
+```
+
+#### Ручная загрузка
+Скачайте DEB/RPM пакеты из [Releases](https://github.com/piligrim/namedot/releases)
+
+### Из исходников
 
 ## Требования
 - Go >= 1.23 (рекомендуется 1.24+)

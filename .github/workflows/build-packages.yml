@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  pages: write
+  id-token: write
 
 jobs:
   build-packages:
@@ -93,3 +96,134 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup APT repository
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # Create APT repository structure
+          mkdir -p apt-repo/pool/main
+          mkdir -p apt-repo/dists/stable/main/binary-amd64
+
+          # Copy DEB package
+          cp *.deb apt-repo/pool/main/
+
+          # Install dpkg-dev for creating Packages file
+          sudo apt-get update && sudo apt-get install -y dpkg-dev
+
+          # Generate Packages file
+          cd apt-repo
+          dpkg-scanpackages pool/main /dev/null | gzip -9c > dists/stable/main/binary-amd64/Packages.gz
+          dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-amd64/Packages
+
+          # Create Release file
+          cd dists/stable
+          cat > Release <<EOF
+          Origin: namedot
+          Label: namedot
+          Suite: stable
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: namedot APT Repository
+          EOF
+
+          # Add checksums to Release
+          echo "MD5Sum:" >> Release
+          for file in main/binary-amd64/Packages*; do
+            echo " $(md5sum $file | cut -d' ' -f1) $(stat -c%s $file) $file" >> Release
+          done
+
+          echo "SHA256:" >> Release
+          for file in main/binary-amd64/Packages*; do
+            echo " $(sha256sum $file | cut -d' ' -f1) $(stat -c%s $file) $file" >> Release
+          done
+
+      - name: Setup YUM repository
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # Create YUM repository structure
+          mkdir -p yum-repo/namedot/stable/x86_64
+
+          # Copy RPM package
+          cp *.rpm yum-repo/namedot/stable/x86_64/
+
+          # Install createrepo for creating YUM metadata
+          sudo apt-get install -y createrepo-c
+
+          # Generate repository metadata
+          createrepo_c yum-repo/namedot/stable/x86_64/
+
+          # Create repo file
+          mkdir -p yum-repo/namedot
+          cat > yum-repo/namedot/namedot.repo <<EOF
+          [namedot]
+          name=namedot Repository
+          baseurl=https://\$GITHUB_REPOSITORY_OWNER.github.io/namedot/yum-repo/namedot/stable/\$basearch
+          enabled=1
+          gpgcheck=0
+          EOF
+
+      - name: Create index page
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p pages
+          cat > pages/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>namedot Package Repository</title>
+              <style>
+                  body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                  h1 { color: #333; }
+                  pre { background: #f4f4f4; padding: 15px; border-radius: 5px; }
+                  .section { margin: 30px 0; }
+              </style>
+          </head>
+          <body>
+              <h1>namedot Package Repository</h1>
+
+              <div class="section">
+                  <h2>Debian/Ubuntu (APT)</h2>
+                  <pre>
+          # Add repository
+          echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+
+          # Update and install
+          sudo apt-get update
+          sudo apt-get install namedot
+                  </pre>
+              </div>
+
+              <div class="section">
+                  <h2>RHEL/CentOS/Fedora (YUM/DNF)</h2>
+                  <pre>
+          # Add repository
+          sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+
+          # Install
+          sudo yum install namedot
+          # or
+          sudo dnf install namedot
+                  </pre>
+              </div>
+
+              <div class="section">
+                  <h2>Manual Download</h2>
+                  <p>Visit <a href="https://github.com/piligrim/namedot/releases">Releases</a> to download packages manually.</p>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          # Copy repositories to pages
+          cp -r apt-repo pages/
+          cp -r yum-repo pages/
+
+      - name: Deploy to GitHub Pages
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages
+          publish_branch: gh-pages
+          force_orphan: true
