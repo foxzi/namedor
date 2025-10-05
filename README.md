@@ -147,8 +147,45 @@ Makefile
 - All tests: `make test-all`
 - Unit + integration: `make test`
 - GeoDNS tests: `make test-geo`
-  
-  
+
+Building Packages
+
+To build DEB/RPM packages locally:
+
+1. Install nFPM:
+```bash
+echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+sudo apt-get update
+sudo apt-get install -y nfpm
+```
+
+2. Build packages:
+```bash
+# Set version (or use git describe)
+export VERSION="0.1.0"
+# Or automatically from git:
+# export VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
+
+# Build binary
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
+  -ldflags "-X main.Version=$VERSION -s -w" \
+  -o namedot \
+  ./cmd/namedot
+
+# Build DEB package
+nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
+
+# Build RPM package
+nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
+
+# Check results
+ls -lh *.deb *.rpm
+```
+
+Quick one-liner:
+```bash
+VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s -w" -o namedot ./cmd/namedot && nfpm pkg --packager deb --config packaging/nfpm.yaml --target . && nfpm pkg --packager rpm --config packaging/nfpm.yaml --target . && ls -lh *.deb *.rpm
+```
 
 Config Reference
 - `auto_soa_on_missing`: if true, при отсутствии SOA в зоне автоматически создаётся дефолтная запись SOA:
@@ -312,6 +349,45 @@ log:
 - Все тесты: `make test-all`
 - Модульные + интеграционные: `make test`
 - GeoDNS тесты: `make test-geo`
+
+## Сборка пакетов
+
+Для локальной сборки DEB/RPM пакетов:
+
+1. Установить nFPM:
+```bash
+echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+sudo apt-get update
+sudo apt-get install -y nfpm
+```
+
+2. Собрать пакеты:
+```bash
+# Установить версию (или использовать git describe)
+export VERSION="0.1.0"
+# Или автоматически из git:
+# export VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
+
+# Собрать бинарник
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
+  -ldflags "-X main.Version=$VERSION -s -w" \
+  -o namedot \
+  ./cmd/namedot
+
+# Собрать DEB пакет
+nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
+
+# Собрать RPM пакет
+nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
+
+# Проверить результат
+ls -lh *.deb *.rpm
+```
+
+Быстрая сборка одной командой:
+```bash
+VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s -w" -o namedot ./cmd/namedot && nfpm pkg --packager deb --config packaging/nfpm.yaml --target . && nfpm pkg --packager rpm --config packaging/nfpm.yaml --target . && ls -lh *.deb *.rpm
+```
 
 ## Справка по конфигурации
 - `auto_soa_on_missing`: если true, при отсутствии SOA в зоне автоматически создаётся дефолтная запись SOA:
