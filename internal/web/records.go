@@ -82,7 +82,13 @@ func (s *Server) listRecords(c *gin.Context) {
 					<td>%d</td>
 					<td><em>%s</em></td>
 					<td><code>%s</code></td>
-					<td>
+					<td class="actions">
+						<button class="btn btn-sm"
+							hx-get="/admin/records/%d/edit"
+							hx-target="#zones-list"
+							hx-swap="innerHTML">
+							Edit
+						</button>
 						<button class="btn btn-sm btn-danger"
 							hx-delete="/admin/records/%d"
 							hx-confirm="Delete this record?"
@@ -91,7 +97,7 @@ func (s *Server) listRecords(c *gin.Context) {
 							Delete
 						</button>
 					</td>
-				</tr>`, rr.Name, rr.Type, rr.TTL, geoInfo, record.Data, record.ID)
+				</tr>`, rr.Name, rr.Type, rr.TTL, geoInfo, record.Data, record.ID, record.ID)
 			}
 		}
 

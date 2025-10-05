@@ -71,6 +71,8 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 		admin.GET("/zones/:id/records", s.listRecords)
 		admin.GET("/zones/:id/records/new", s.newRecordForm)
 		admin.POST("/zones/:id/records", s.createRecord)
+		admin.GET("/records/:id/edit", s.editRecordForm)
+		admin.PUT("/records/:id", s.updateRecord)
 		admin.DELETE("/records/:id", s.deleteRecord)
 	}
 }
