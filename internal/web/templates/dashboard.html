@@ -134,6 +134,7 @@
         <div class="tabs">
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="showTab('zones')">DNS Zones</button>
+                <button class="tab-button" onclick="showTab('templates')">Templates</button>
                 <button class="tab-button" onclick="showTab('logs')">Query Logs</button>
             </div>
 
@@ -146,6 +147,18 @@
                         </button>
                     </div>
                     <div id="zones-list" hx-get="/admin/zones" hx-trigger="load" hx-swap="innerHTML">
+                        Loading...
+                    </div>
+                </div>
+
+                <div id="templates-tab" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2>DNS Templates</h2>
+                        <button class="btn" hx-get="/admin/templates/new" hx-target="#templates-content" hx-swap="innerHTML">
+                            + New Template
+                        </button>
+                    </div>
+                    <div id="templates-content" hx-get="/admin/templates" hx-trigger="load" hx-swap="innerHTML">
                         Loading...
                     </div>
                 </div>
@@ -164,6 +177,7 @@
         function showTab(tab) {
             // Hide all tabs
             document.getElementById('zones-tab').style.display = 'none';
+            document.getElementById('templates-tab').style.display = 'none';
             document.getElementById('logs-tab').style.display = 'none';
 
             // Remove active class from all buttons
@@ -172,6 +186,31 @@
             // Show selected tab
             document.getElementById(tab + '-tab').style.display = 'block';
             event.target.classList.add('active');
+        }
+
+        function showTemplateSelector(zoneId) {
+            const container = document.getElementById('template-selector-' + zoneId);
+            fetch('/admin/templates')
+                .then(r => r.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const templates = doc.querySelectorAll('tbody tr');
+
+                    let selector = '<div style="background: #edf2f7; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;"><h4>Select Template</h4><div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">';
+
+                    templates.forEach(row => {
+                        const nameCell = row.querySelector('td:first-child strong');
+                        const id = row.querySelector('button[hx-get*="/view"]')?.getAttribute('hx-get')?.match(/\/templates\/(\d+)/)?.[1];
+                        if (nameCell && id) {
+                            selector += `<button class="btn btn-sm" hx-get="/admin/templates/${id}/apply?zone_id=${zoneId}" hx-target="#zones-list" hx-swap="innerHTML">${nameCell.textContent}</button>`;
+                        }
+                    });
+
+                    selector += '<button class="btn btn-sm" style="background: #718096;" onclick="document.getElementById(\'template-selector-' + zoneId + '\').innerHTML=\'\'">Cancel</button></div></div>';
+                    container.innerHTML = selector;
+                    htmx.process(container);
+                });
         }
     </script>
 </body>

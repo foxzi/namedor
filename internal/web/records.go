@@ -50,12 +50,17 @@ func (s *Server) listRecords(c *gin.Context) {
 		</button>
 		<h2 style="margin-top: 1rem;">Records for %s</h2>
 	</div>
-	<div style="margin-bottom: 1rem;">
+	<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
 		<button class="btn" hx-get="/admin/zones/%d/records/new" hx-target="#records-list" hx-swap="beforebegin">
 			+ Add Record
 		</button>
+		<button class="btn" style="background: #48bb78;"
+			onclick="showTemplateSelector(%d)">
+			📋 Apply Template
+		</button>
 	</div>
-	<div id="records-list">`, zone.Name, zoneID)
+	<div id="template-selector-%d"></div>
+	<div id="records-list">`, zone.Name, zoneID, zoneID, zoneID)
 
 	if len(rrsets) == 0 {
 		html += `<div class="empty-state">No records found. Add your first record!</div>`

@@ -29,6 +29,6 @@ func Open(cfg config.DBConfig) (*gorm.DB, error) {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-    return db.AutoMigrate(&Zone{}, &RRSet{}, &RData{})
+    return db.AutoMigrate(&Zone{}, &RRSet{}, &RData{}, &Template{}, &TemplateRecord{})
 }
 

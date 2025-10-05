@@ -74,6 +74,20 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 		admin.GET("/records/:id/edit", s.editRecordForm)
 		admin.PUT("/records/:id", s.updateRecord)
 		admin.DELETE("/records/:id", s.deleteRecord)
+
+		// Templates
+		admin.GET("/templates", s.listTemplates)
+		admin.GET("/templates/new", s.newTemplateForm)
+		admin.POST("/templates", s.createTemplate)
+		admin.GET("/templates/:id/view", s.viewTemplate)
+		admin.GET("/templates/:id/edit", s.editTemplateForm)
+		admin.PUT("/templates/:id", s.updateTemplate)
+		admin.DELETE("/templates/:id", s.deleteTemplate)
+		admin.GET("/templates/:id/records/new", s.newTemplateRecordForm)
+		admin.POST("/templates/:id/records", s.createTemplateRecord)
+		admin.DELETE("/templates/records/:id", s.deleteTemplateRecord)
+		admin.GET("/templates/:id/apply", s.applyTemplateForm)
+		admin.POST("/templates/:id/apply", s.applyTemplate)
 	}
 }
 
