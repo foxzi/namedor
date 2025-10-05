@@ -14,15 +14,16 @@
 - поддержка динамического обновления зон (RFC 2136).
 
 ## 2. Основные функции
-- Обработка DNS-запросов по **UDP:53**, **TCP:53**.  
-- Ответы из БД; при отсутствии — форвардинг на внешний DNS.  
-- Поддерживаемые типы записей:  
-  **A, CNAME, MX, TXT, SRV, NS, SOA, SPF, DNSKEY, RRSIG, DS, CAA.**  
-- DNSSEC (включается флагом).  
-- GeoDNS: выбор ответа по IP клиента (MaxMind GeoLite2).  
-- Кэширование по TTL.  
+- Обработка DNS-запросов по **UDP:53**, **TCP:53**.
+- Ответы из БД; при отсутствии — форвардинг на внешний DNS.
+- Поддерживаемые типы записей:
+  **A, CNAME, MX, TXT, SRV, NS, SOA, SPF, DNSKEY, RRSIG, DS, CAA.**
+- DNSSEC (включается флагом).
+- GeoDNS: выбор ответа по IP клиента (MaxMind GeoLite2).
+- Кэширование по TTL.
 - Логирование запросов и ответов.
 - Файл конфигурации (YAML).
+- **Master-Slave репликация**: автоматическая синхронизация данных между серверами через REST API.
 
 ## 3. Хранение данных
 
@@ -79,21 +80,34 @@ rdata(
 }
 ```
 
-###mport / Export
+### Import / Export
 | Метод | Путь | Описание |
 |--------|------|----------|
-| `GET /zones/{id}/export?format=bind|json` | Экспорт зоны |
-| `POST /zones/{id}/import?format=bind|json&mode=upsert|replace&serial=auto|preserve` | Импорт зоны |
+| `GET /zones/{id}/export?format=bind\|json` | Экспорт зоны |
+| `POST /zones/{id}/import?format=bind\|json&mode=upsert\|replace&serial=auto\|preserve` | Импорт зоны |
 
-- Формат `bind` — текст зонфайла.  
-- Формат `json` — сериализованный список RRsets.  
-- При изменении зоны — автоматическое обновление `SOA.serial`.  
+- Формат `bind` — текст зонфайла.
+- Формат `json` — сериализованный список RRsets.
+- При изменении зоны — автоматическое обновление `SOA.serial`.
+
+### Replication (Master-Slave)
+| Метод | Путь | Описание |
+|--------|------|----------|
+| `GET /sync/export` | Экспорт всех зон и шаблонов для репликации |
+| `POST /sync/import` | Импорт данных на слейв-сервер |
+
+- **Master сервер**: предоставляет данные через `/sync/export`
+- **Slave сервер**: автоматически запрашивает данные с настраиваемым интервалом
+- Синхронизируются: зоны, RRsets, записи, шаблоны
+- Авторизация через Bearer token (тот же что и для API)  
 
 ## 5. Конфигурация
 ```yaml
 listen: "0.0.0.0:53"
 forwarder: "8.8.8.8"
 enable_dnssec: true
+api_token: "your-secure-token"
+rest_listen: "0.0.0.0:8080"
 
 db:
   driver: "postgres"
@@ -104,7 +118,21 @@ geoip:
   mmdb_path: "/var/lib/maxmind/GeoLite2-City.mmdb"
   reload_sec: 300
   use_ecs: true
+
+# Опционально: Master-Slave репликация
+replication:
+  mode: "master"  # или "slave", или не указывать
+  # Для slave режима:
+  master_url: "http://master-server:8080"
+  sync_interval_sec: 60
+  api_token: "your-secure-token"
 ```
+
+**Replication режимы:**
+- `mode: "master"` - сервер предоставляет данные для репликации
+- `mode: "slave"` - сервер автоматически синхронизируется с мастером
+- В slave режиме автоматически отключаются: веб-админка и DNS-обновления (read-only)
+- Подробнее: [REPLICATION.md](REPLICATION.md)
 
 ## 6. Требования
 - Язык реализации: **Go**.  

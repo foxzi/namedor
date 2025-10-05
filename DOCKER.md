@@ -202,3 +202,146 @@ Remove all containers, volumes, and networks:
 ```bash
 docker-compose down -v
 ```
+
+## Master-Slave Replication
+
+You can run multiple GeoDNS instances in master-slave mode for high availability.
+
+### Example Docker Compose Setup
+
+Create `docker-compose.replication.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  # Master DNS server
+  geodns-master:
+    build: .
+    container_name: geodns-master
+    ports:
+      - "8053:53/udp"
+      - "8053:53/tcp"
+      - "18080:8080/tcp"
+    volumes:
+      - ./config.master.yaml:/app/config.yaml:ro
+      - ./geoipdb:/app/geoipdb:ro
+      - master-data:/data
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+
+  # Slave DNS server 1
+  geodns-slave1:
+    build: .
+    container_name: geodns-slave1
+    ports:
+      - "8054:53/udp"
+      - "8054:53/tcp"
+      - "18081:8080/tcp"
+    volumes:
+      - ./config.slave1.yaml:/app/config.yaml:ro
+      - ./geoipdb:/app/geoipdb:ro
+      - slave1-data:/data
+    environment:
+      - TZ=UTC
+    depends_on:
+      - geodns-master
+    restart: unless-stopped
+
+  # Slave DNS server 2
+  geodns-slave2:
+    build: .
+    container_name: geodns-slave2
+    ports:
+      - "8055:53/udp"
+      - "8055:53/tcp"
+      - "18082:8080/tcp"
+    volumes:
+      - ./config.slave2.yaml:/app/config.yaml:ro
+      - ./geoipdb:/app/geoipdb:ro
+      - slave2-data:/data
+    environment:
+      - TZ=UTC
+    depends_on:
+      - geodns-master
+    restart: unless-stopped
+
+volumes:
+  master-data:
+  slave1-data:
+  slave2-data:
+```
+
+### Configuration Files
+
+**config.master.yaml**:
+```yaml
+listen: "0.0.0.0:53"
+api_token: "your-secure-token"
+rest_listen: "0.0.0.0:8080"
+
+db:
+  driver: "sqlite"
+  dsn: "file:/data/master.db?_foreign_keys=on"
+
+replication:
+  mode: "master"
+```
+
+**config.slave1.yaml**:
+```yaml
+listen: "0.0.0.0:53"
+api_token: "your-secure-token"
+rest_listen: "0.0.0.0:8080"
+
+db:
+  driver: "sqlite"
+  dsn: "file:/data/slave1.db?_foreign_keys=on"
+
+replication:
+  mode: "slave"
+  master_url: "http://geodns-master:8080"
+  sync_interval_sec: 30
+  api_token: "your-secure-token"
+```
+
+### Running Replication Setup
+
+```bash
+# Start all servers
+docker-compose -f docker-compose.replication.yml up -d
+
+# View logs
+docker-compose -f docker-compose.replication.yml logs -f
+
+# Check sync status
+docker-compose -f docker-compose.replication.yml logs geodns-slave1 | grep -i sync
+
+# Test DNS on master
+dig @localhost -p 8053 example.com A
+
+# Test DNS on slave (should return same data)
+dig @localhost -p 8054 example.com A
+```
+
+### Load Balancing
+
+Use a load balancer (nginx, haproxy, etc.) to distribute DNS queries across slaves:
+
+**nginx example** (nginx.conf):
+```nginx
+stream {
+    upstream dns_slaves {
+        server geodns-slave1:53;
+        server geodns-slave2:53;
+    }
+
+    server {
+        listen 53 udp;
+        proxy_pass dns_slaves;
+    }
+}
+```
+
+For more details on replication setup, see [REPLICATION.md](REPLICATION.md).
