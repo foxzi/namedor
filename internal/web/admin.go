@@ -2,6 +2,7 @@ package web
 
 import (
 	"crypto/rand"
+	"embed"
 	"encoding/base64"
 	"html/template"
 	"net/http"
@@ -13,6 +14,9 @@ import (
 
 	"namedot/internal/config"
 )
+
+//go:embed templates/*.html
+var templatesFS embed.FS
 
 type Server struct {
 	cfg      *config.Config
@@ -32,7 +36,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
 		return nil, nil
 	}
 
-	tmpl, err := template.ParseGlob("internal/web/templates/*.html")
+	tmpl, err := template.ParseFS(templatesFS, "templates/*.html")
 	if err != nil {
 		return nil, err
 	}
