@@ -8,7 +8,7 @@ import (
     "github.com/miekg/dns"
     "gorm.io/gorm"
 
-    dbm "smaillgeodns/internal/db"
+    dbm "namedot/internal/db"
 )
 
 // ToBind serializes a zone to a simplistic BIND-like zonefile.

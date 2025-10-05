@@ -7,8 +7,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"smaillgeodns/internal/config"
-	"smaillgeodns/internal/db"
+	"namedot/internal/config"
+	"namedot/internal/db"
 )
 
 func main() {

@@ -7,7 +7,7 @@ import (
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
 
-    dbm "smaillgeodns/internal/db"
+    dbm "namedot/internal/db"
 )
 
 func newTestDB(t *testing.T) *gorm.DB {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"smaillgeodns/internal/db"
+	"namedot/internal/db"
 )
 
 // Helper functions for pointer conversion

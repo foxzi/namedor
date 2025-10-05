@@ -10,7 +10,7 @@
 *~
 
 # Build artifacts
-smaillgeodns
+namedot
 *.exe
 *.dll
 *.so

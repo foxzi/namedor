@@ -5,7 +5,7 @@ import (
 
     "gorm.io/gorm"
 
-    dbm "smaillgeodns/internal/db"
+    dbm "namedot/internal/db"
 )
 
 // ImportJSON imports RRsets from src into dst zone.

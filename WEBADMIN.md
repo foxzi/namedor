@@ -47,7 +47,7 @@ admin:
 ### 3. Start Server
 
 ```bash
-./smaillgeodns
+./namedot
 ```
 
 ### 4. Access Admin Panel
@@ -285,7 +285,7 @@ admin:
 ### 3. Запуск сервера
 
 ```bash
-./smaillgeodns
+./namedot
 ```
 
 ### 4. Доступ к панели администратора

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"smaillgeodns/internal/db"
+	"namedot/internal/db"
 )
 
 func (s *Server) listTemplates(c *gin.Context) {

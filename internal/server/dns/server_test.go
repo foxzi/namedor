@@ -8,9 +8,9 @@ import (
 
     "github.com/miekg/dns"
 
-    "smaillgeodns/internal/cache"
-    dbm "smaillgeodns/internal/db"
-    "smaillgeodns/internal/geoip"
+    "namedot/internal/cache"
+    dbm "namedot/internal/db"
+    "namedot/internal/geoip"
 )
 
 func TestSelectGeoRecords(t *testing.T) {

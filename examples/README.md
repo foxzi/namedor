@@ -33,7 +33,7 @@ Key features:
 ```bash
 cp examples/config.master.yaml config.yaml
 # Edit api_token with a secure token
-./smaillgeodns
+./namedot
 ```
 
 ### Deploy Slave Server
@@ -44,7 +44,7 @@ cp examples/config.slave.yaml config.yaml
 #   - replication.master_url (e.g., "http://192.168.1.100:8080")
 #   - replication.api_token (same as master)
 #   - replication.sync_interval_sec (optional, default: 60)
-./smaillgeodns
+./namedot
 ```
 
 ## Notes

@@ -8,11 +8,11 @@ import (
     "syscall"
     "time"
 
-    "smaillgeodns/internal/config"
-    "smaillgeodns/internal/db"
-    "smaillgeodns/internal/replication"
-    dnssrv "smaillgeodns/internal/server/dns"
-    restsrv "smaillgeodns/internal/server/rest"
+    "namedot/internal/config"
+    "namedot/internal/db"
+    "namedot/internal/replication"
+    dnssrv "namedot/internal/server/dns"
+    restsrv "namedot/internal/server/rest"
 )
 
 func main() {

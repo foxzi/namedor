@@ -1,5 +1,5 @@
 GO ?= go
-BIN := smaillgeodns
+BIN := namedot
 CFG ?= config.yaml
 
 .PHONY: all build run test test-all test-unit test-int test-geo mmdb-clean clean
@@ -33,4 +33,4 @@ mmdb-clean:
 	rm -f ./geoipdb/*.mmdb
 
 clean:
-	rm -f $(BIN) *.db *.test *.out smaillgeodns_dev.db
+	rm -f $(BIN) *.db *.test *.out namedot_dev.db

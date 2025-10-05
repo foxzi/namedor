@@ -14,10 +14,10 @@ import (
     "gorm.io/gorm"
     "path/filepath"
 
-    "smaillgeodns/internal/config"
-    "smaillgeodns/internal/db"
-    dnssrv "smaillgeodns/internal/server/dns"
-    restsrv "smaillgeodns/internal/server/rest"
+    "namedot/internal/config"
+    "namedot/internal/db"
+    dnssrv "namedot/internal/server/dns"
+    restsrv "namedot/internal/server/rest"
 )
 
 func waitHTTPReady(url string, timeout time.Duration) error {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"smaillgeodns/internal/db"
+	"namedot/internal/db"
 )
 
 func (s *Server) listZones(c *gin.Context) {

@@ -12,8 +12,8 @@ import (
 
     "gorm.io/gorm"
 
-    "smaillgeodns/internal/config"
-    dbm "smaillgeodns/internal/db"
+    "namedot/internal/config"
+    dbm "namedot/internal/db"
 )
 
 // SyncData matches the structure in rest/server.go

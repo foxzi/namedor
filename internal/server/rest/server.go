@@ -10,10 +10,10 @@ import (
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
 
-    "smaillgeodns/internal/config"
-    dbm "smaillgeodns/internal/db"
-    "smaillgeodns/internal/server/rest/zoneio"
-    "smaillgeodns/internal/web"
+    "namedot/internal/config"
+    dbm "namedot/internal/db"
+    "namedot/internal/server/rest/zoneio"
+    "namedot/internal/web"
 )
 
 type Server struct {

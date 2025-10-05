@@ -54,7 +54,7 @@ replication:
 cp examples/config.master.yaml config.yaml
 
 # Запустите мастер
-./smaillgeodns
+./namedot
 ```
 
 Мастер будет слушать на порту 8080 и готов принимать запросы репликации.
@@ -69,7 +69,7 @@ cp examples/config.slave.yaml config.yaml
 # Например: master_url: "http://192.168.1.100:8080"
 
 # Запустите слейв
-./smaillgeodns
+./namedot
 ```
 
 Слейв автоматически начнет синхронизацию с мастером каждые 60 секунд (или с интервалом, указанным в конфиге).
@@ -296,7 +296,7 @@ This protects the slave from direct modifications and ensures read-only mode.
 cp examples/config.master.yaml config.yaml
 
 # Start master
-./smaillgeodns
+./namedot
 ```
 
 Master will listen on port 8080 and be ready to accept replication requests.
@@ -311,7 +311,7 @@ cp examples/config.slave.yaml config.yaml
 # Example: master_url: "http://192.168.1.100:8080"
 
 # Start slave
-./smaillgeodns
+./namedot
 ```
 
 Slave will automatically start synchronizing with master every 60 seconds (or at the interval specified in config).

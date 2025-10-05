@@ -14,11 +14,11 @@ import (
 
     "github.com/miekg/dns"
 
-    "smaillgeodns/internal/config"
-    "smaillgeodns/internal/db"
-    "smaillgeodns/internal/geoip"
-    dnssrv "smaillgeodns/internal/server/dns"
-    restsrv "smaillgeodns/internal/server/rest"
+    "namedot/internal/config"
+    "namedot/internal/db"
+    "namedot/internal/geoip"
+    dnssrv "namedot/internal/server/dns"
+    restsrv "namedot/internal/server/rest"
 )
 
 // Test GeoDNS selection using ECS with a known US IP (8.8.8.8).

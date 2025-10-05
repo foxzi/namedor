@@ -26,7 +26,7 @@ default_ttl: 300
 
 db:
   driver: "sqlite"
-  dsn: "file:smaillgeodns.db?_foreign_keys=on"
+  dsn: "file:namedot.db?_foreign_keys=on"
 
 geoip:
   enabled: false
@@ -39,8 +39,8 @@ log:
 ```
 
 2) Build and run:
-- `go build ./cmd/smaillgeodns`
-- `sudo ./smaillgeodns` (DNS on :53 requires privileges or port redirect)
+- `go build ./cmd/namedot`
+- `sudo ./namedot` (DNS on :53 requires privileges or port redirect)
 
 REST API (Bearer devtoken)
 - Create zone: `POST /zones {"name":"example.com"}`
@@ -100,7 +100,7 @@ GeoIP Databases
 
 Development
 - Sync deps: `go mod tidy`
-- Build only main: `go build ./cmd/smaillgeodns`
+- Build only main: `go build ./cmd/namedot`
 - Lint/format: follow project defaults (no external config added yet)
 
 Makefile
@@ -153,7 +153,7 @@ default_ttl: 300
 
 db:
   driver: "sqlite"
-  dsn: "file:smaillgeodns.db?_foreign_keys=on"
+  dsn: "file:namedot.db?_foreign_keys=on"
 
 geoip:
   enabled: false
@@ -166,8 +166,8 @@ log:
 ```
 
 2) Сборка и запуск:
-- `go build ./cmd/smaillgeodns`
-- `sudo ./smaillgeodns` (DNS на :53 требует привилегий или проброса порта)
+- `go build ./cmd/namedot`
+- `sudo ./namedot` (DNS на :53 требует привилегий или проброса порта)
 
 ## REST API (Bearer devtoken)
 - Создать зону: `POST /zones {"name":"example.com"}`
@@ -227,7 +227,7 @@ log:
 
 ## Разработка
 - Синхронизация зависимостей: `go mod tidy`
-- Сборка только main: `go build ./cmd/smaillgeodns`
+- Сборка только main: `go build ./cmd/namedot`
 - Линтинг/форматирование: следуйте дефолтным настройкам проекта (внешний конфиг пока не добавлен)
 
 ## Makefile

@@ -109,11 +109,11 @@ rm -f test_master.db test_slave.db
 echo -e "${GREEN}✓ Databases cleaned${NC}"
 
 echo -e "${YELLOW}Step 3: Building${NC}"
-go build ./cmd/smaillgeodns
+go build ./cmd/namedot
 echo -e "${GREEN}✓ Build complete${NC}"
 
 echo -e "${YELLOW}Step 4: Starting master server${NC}"
-SGDNS_CONFIG=config.test.master.yaml ./smaillgeodns > master.log 2>&1 &
+SGDNS_CONFIG=config.test.master.yaml ./namedot > master.log 2>&1 &
 MASTER_PID=$!
 echo "Master PID: $MASTER_PID"
 sleep 2
@@ -156,7 +156,7 @@ echo "Master zones: $MASTER_ZONES"
 echo -e "${GREEN}✓ Master has data${NC}"
 
 echo -e "${YELLOW}Step 8: Starting slave server${NC}"
-SGDNS_CONFIG=config.test.slave.yaml ./smaillgeodns > slave.log 2>&1 &
+SGDNS_CONFIG=config.test.slave.yaml ./namedot > slave.log 2>&1 &
 SLAVE_PID=$!
 echo "Slave PID: $SLAVE_PID"
 sleep 3

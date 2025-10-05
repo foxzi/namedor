@@ -1,4 +1,4 @@
-module smaillgeodns
+module namedot
 
 go 1.24
 

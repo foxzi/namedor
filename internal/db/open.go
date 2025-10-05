@@ -8,7 +8,7 @@ import (
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
 
-    "smaillgeodns/internal/config"
+    "namedot/internal/config"
 )
 
 func Open(cfg config.DBConfig) (*gorm.DB, error) {
@@ -20,7 +20,7 @@ func Open(cfg config.DBConfig) (*gorm.DB, error) {
     case "sqlite", "sqlite3", "":
         dsn := cfg.DSN
         if dsn == "" {
-            dsn = "file:smaillgeodns.db?_foreign_keys=on"
+            dsn = "file:namedot.db?_foreign_keys=on"
         }
         return gorm.Open(sqlite.Open(dsn), &gorm.Config{})
     default:

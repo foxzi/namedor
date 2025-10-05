@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"smaillgeodns/internal/config"
+	"namedot/internal/config"
 )
 
 type Server struct {

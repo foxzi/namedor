@@ -12,10 +12,10 @@ import (
     "github.com/miekg/dns"
     "gorm.io/gorm"
 
-    "smaillgeodns/internal/cache"
-    "smaillgeodns/internal/config"
-    dbm "smaillgeodns/internal/db"
-    "smaillgeodns/internal/geoip"
+    "namedot/internal/cache"
+    "namedot/internal/config"
+    dbm "namedot/internal/db"
+    "namedot/internal/geoip"
 )
 
 type Server struct {

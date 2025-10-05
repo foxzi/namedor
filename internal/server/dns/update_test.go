@@ -8,8 +8,8 @@ import (
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
 
-    "smaillgeodns/internal/config"
-    dbm "smaillgeodns/internal/db"
+    "namedot/internal/config"
+    dbm "namedot/internal/db"
 )
 
 type fakeWriter struct{ msg *dns.Msg }

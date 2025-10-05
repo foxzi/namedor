@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build binary
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o smaillgeodns ./cmd/smaillgeodns
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o namedot ./cmd/namedot
 
 # Runtime stage
 FROM alpine:latest
@@ -25,7 +25,7 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata wget
 
 # Copy binary from builder
-COPY --from=builder /build/smaillgeodns .
+COPY --from=builder /build/namedot .
 
 # Copy GeoIP databases
 COPY geoipdb ./geoipdb
@@ -50,4 +50,4 @@ RUN addgroup -g 1000 geodns && \
 
 USER geodns
 
-ENTRYPOINT ["/app/smaillgeodns"]
+ENTRYPOINT ["/app/namedot"]
