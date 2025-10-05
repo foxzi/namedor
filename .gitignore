@@ -10,7 +10,7 @@
 *.sqlite3
 
 # Local configs and test files
-config.yaml
+/config.yaml
 config.test.*.yaml
 *.log
 test_*.db
