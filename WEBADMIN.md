@@ -17,6 +17,8 @@ GeoDNS includes a built-in web-based admin panel for managing DNS zones and reco
 
 ```bash
 go run cmd/hashpwd/main.go yourPassword
+# or using the main binary
+./namedot --password yourPassword
 ```
 
 Example output:
@@ -255,6 +257,8 @@ GeoDNS включает встроенную веб-панель админис�
 
 ```bash
 go run cmd/hashpwd/main.go yourPassword
+# или через основной бинарник
+./namedot --password yourPassword
 ```
 
 Пример вывода:

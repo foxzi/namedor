@@ -80,6 +80,31 @@ log:
 - `go build ./cmd/namedot`
 - `sudo ./namedot` (DNS on :53 requires privileges or port redirect)
 
+Command-line flags
+- `-c, --config`: path to config file (YAML). Example: `./namedot --config config.yaml`
+- `-t, --test`: validate config and exit. Example: `./namedot --test`
+- `-p, --password`: generate bcrypt hash for admin password and exit. Example: `./namedot --password mySecret`
+- `-v, --version`: print version and exit. Example: `./namedot --version`
+
+Environment and precedence
+- `SGDNS_CONFIG`: if set, used as config path when `--config` is not provided.
+- Precedence: `--config` > `SGDNS_CONFIG` > `./config.yaml`.
+
+Examples
+```bash
+# Run with explicit config
+./namedot --config /etc/namedot/config.yaml
+
+# Validate config and exit (no network listeners)
+./namedot --test --config ./config.yaml
+
+# Generate bcrypt hash for admin password
+./namedot --password 'MyStr0ng!P@ssw0rd'
+
+# Print version
+./namedot --version
+```
+
 REST API (Bearer devtoken)
 - Create zone: `POST /zones {"name":"example.com"}`
 - Add rrset: `POST /zones/{id}/rrsets` with body similar to tz.md
@@ -281,6 +306,31 @@ log:
 2) Сборка и запуск:
 - `go build ./cmd/namedot`
 - `sudo ./namedot` (DNS на :53 требует привилегий или проброса порта)
+
+CLI флаги
+- `-c, --config`: путь к конфигу (YAML). Пример: `./namedot --config config.yaml`
+- `-t, --test`: проверить конфиг и выйти. Пример: `./namedot --test`
+- `-p, --password`: сгенерировать bcrypt-хеш для пароля админки и выйти. Пример: `./namedot --password mySecret`
+- `-v, --version`: вывести версию и выйти. Пример: `./namedot --version`
+
+Окружение и приоритеты
+- `SGDNS_CONFIG`: если установлен, используется как путь к конфигу при отсутствии `--config`.
+- Приоритет: `--config` > `SGDNS_CONFIG` > `./config.yaml`.
+
+Примеры
+```bash
+# Запуск с явным конфигом
+./namedot --config /etc/namedot/config.yaml
+
+# Проверка конфига и выход (без запуска сетевых слушателей)
+./namedot --test --config ./config.yaml
+
+# Генерация bcrypt-хеша для пароля админки
+./namedot --password 'MyStr0ng!P@ssw0rd'
+
+# Вывести версию
+./namedot --version
+```
 
 ## REST API (Bearer devtoken)
 - Создать зону: `POST /zones {"name":"example.com"}`
