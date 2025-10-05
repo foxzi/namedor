@@ -1,6 +1,5 @@
 # Binaries
 /smaillgeodns
-/mmdbgen
 
 # AI settings
 .claude/
@@ -9,10 +8,6 @@
 *.db
 *.sqlite
 *.sqlite3
-
-# GeoIP databases
-*.mmdb
-/geoipdb/
 
 # Go artifacts
 /bin/

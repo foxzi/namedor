@@ -83,18 +83,14 @@ Integration Tests
 - GeoDNS (requires ./geoipdb with .mmdb files):
   - Subnet/ECS selection: `go test ./internal/integration -run TestGeoDNS_WithECS_USCountry -count=1`
   - Country/Continent/ASN selection (auto-skips if data missing): `go test ./internal/integration -run TestGeoDNS_WithECS_Country_Continent_ASN -count=1`
-  - Synthetic MMDB (opt-in): set `GEOIP_SYNTH=1` and run `go test ./internal/integration -run TestGeoDNS_SyntheticMMDB -count=1`
 
-GeoIP Test Data Generator
-- CLI utility to generate synthetic MMDB files for tests: `cmd/mmdbgen`
-- Spec example: `examples/geoip/spec.yaml` (uses RFC 5737 TEST-NET ranges)
-- Localhost example: `examples/geoip/localhost.yaml` (127.0.1.0/24 → RU, 127.0.2.0/24 → GB)
-- Build: `go build ./cmd/mmdbgen`
-- Generate City/ASN MMDBs:
-  - `./mmdbgen -in examples/geoip/spec.yaml -city-out ./geoipdb/city-ipv4.mmdb -asn-out ./geoipdb/asn-ipv4.mmdb`
-- Generate for localhost (requires local patched mmdbwriter via `replace`):
-  - `./mmdbgen -in examples/geoip/localhost.yaml -city-out ./geoipdb/city-localhost.mmdb -asn-out ./geoipdb/asn-localhost.mmdb`
-- By default, upstream mmdbwriter rejects reserved (private/loopback) networks. If you have a local patched mmdbwriter (e.g., in `../mmdbwriter`) without this restriction, this repo's `go.mod` already uses a `replace` to prefer it; you can then generate 127.x.x.x CIDRs for local ECS tests.
+GeoIP Databases
+- Repo ships small MMDBs for local tests in `./geoipdb`:
+  - IPv4 localhost ranges: `city-localhost.mmdb`, `asn-localhost.mmdb` (127.0.1.0/24 → RU/EU/AS65001, 127.0.2.0/24 → GB/EU/AS65002).
+  - IPv6 documentation ranges: `city-localhost6.mmdb`, `asn-localhost6.mmdb` (2001:db8:1::/64 and 2001:db8:2::/64) for ECS IPv6 tests.
+- Verify with `mmdblookup`, e.g.:
+  - `mmdblookup --file geoipdb/city-localhost.mmdb --ip 127.0.1.10`
+  - `mmdblookup --file geoipdb/asn-localhost6.mmdb --ip 2001:db8:1::1`
 
 Development
 - Sync deps: `go mod tidy`
@@ -107,10 +103,8 @@ Makefile
 - All tests: `make test-all`
 - Unit + integration: `make test`
 - GeoDNS tests: `make test-geo`
-- Synthetic MMDB tests: `make test-synth` (sets `GEOIP_SYNTH=1`)
-- Build mmdbgen: `make mmdbgen`
-- Generate localhost MMDBs: `make mmdb-localhost`
-- Generate from spec: `make mmdb SPEC=examples/geoip/spec.yaml CITY_OUT=./geoipdb/city.mmdb ASN_OUT=./geoipdb/asn.mmdb`
+  
+  
 
 Config Reference
 - `auto_soa_on_missing`: if true, при отсутствии SOA в зоне автоматически создаётся дефолтная запись SOA:
