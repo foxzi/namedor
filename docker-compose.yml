@@ -2,14 +2,14 @@ services:
   # GeoDNS server with SQLite (simplest setup)
   geodns:
     build: .
-    container_name: smaillgeodns
+    container_name: namedot
     restart: unless-stopped
     ports:
       - "8053:53/udp"
       - "8053:53/tcp"
       - "18080:8080/tcp"
     volumes:
-      - ./config.docker.yaml:/app/config.yaml:ro
+      - ./examples/config.docker.yaml:/app/config.yaml:ro
       - geodns-data:/data
       - ./geoipdb:/app/geoipdb:ro
     environment:
@@ -26,14 +26,14 @@ services:
   # Example: GeoDNS with PostgreSQL
   geodns-postgres:
     build: .
-    container_name: smaillgeodns-postgres
+    container_name: namedot-postgres
     restart: unless-stopped
     ports:
       - "8054:53/udp"
       - "8054:53/tcp"
       - "18081:8080/tcp"
     volumes:
-      - ./config.postgres.yaml:/app/config.yaml:ro
+      - ./examples/config.postgres.yaml:/app/config.yaml:ro
       - ./geoipdb:/app/geoipdb:ro
     environment:
       - TZ=UTC
@@ -68,14 +68,14 @@ services:
   # Example: GeoDNS with MySQL
   geodns-mysql:
     build: .
-    container_name: smaillgeodns-mysql
+    container_name: namedot-mysql
     restart: unless-stopped
     ports:
       - "8055:53/udp"
       - "8055:53/tcp"
       - "18082:8080/tcp"
     volumes:
-      - ./config.mysql.yaml:/app/config.yaml:ro
+      - ./examples/config.mysql.yaml:/app/config.yaml:ro
       - ./geoipdb:/app/geoipdb:ro
     environment:
       - TZ=UTC

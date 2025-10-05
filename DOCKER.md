@@ -24,9 +24,9 @@ The server will be available at:
 
 ## Configuration Files
 
-- `config.docker.yaml` - SQLite (default, standalone)
-- `config.postgres.yaml` - PostgreSQL backend
-- `config.mysql.yaml` - MySQL backend
+- `examples/config.docker.yaml` - SQLite (default, standalone)
+- `examples/config.postgres.yaml` - PostgreSQL backend
+- `examples/config.mysql.yaml` - MySQL backend
 
 ## Database Backends
 
@@ -59,7 +59,7 @@ Services:
 Build the image manually:
 
 ```bash
-docker build -t smaillgeodns:latest .
+docker build -t namedot:latest .
 ```
 
 Run standalone container:
@@ -70,10 +70,10 @@ docker run -d \
   -p 8053:53/udp \
   -p 8053:53/tcp \
   -p 18080:8080/tcp \
-  -v $(pwd)/config.docker.yaml:/app/config.yaml:ro \
+  -v $(pwd)/examples/config.docker.yaml:/app/config.yaml:ro \
   -v $(pwd)/geoipdb:/app/geoipdb:ro \
   -v geodns-data:/data \
-  smaillgeodns:latest
+  namedot:latest
 ```
 
 ## Volumes

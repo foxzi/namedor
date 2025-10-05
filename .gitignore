@@ -1,5 +1,5 @@
 # Binaries
-/smaillgeodns
+/namedot
 
 # AI settings
 .claude/
@@ -8,6 +8,12 @@
 *.db
 *.sqlite
 *.sqlite3
+
+# Local configs and test files
+config.yaml
+config.test.*.yaml
+*.log
+test_*.db
 
 # Go artifacts
 /bin/
