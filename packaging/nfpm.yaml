@@ -1,0 +1,79 @@
+name: "namedot"
+arch: "amd64"
+platform: "linux"
+version: "${VERSION}"
+section: "net"
+priority: "optional"
+maintainer: "Sergei Vorontsov <piligrim@rootnix.net>"
+description: |
+  Lightweight DNS server with REST API and GeoDNS support
+  .
+  Features:
+  - UDP/TCP DNS server
+  - REST API for zone management
+  - GeoDNS with country/continent/subnet support
+  - SQLite/PostgreSQL/MySQL backend
+  - Master-Slave replication
+  - Web admin panel
+vendor: "namedot"
+homepage: "https://github.com/piligrim/namedot"
+license: "MIT"
+
+contents:
+  # Binary
+  - src: ./namedot
+    dst: /usr/bin/namedot
+    file_info:
+      mode: 0755
+
+  # Configuration
+  - src: ./packaging/config/config.yaml
+    dst: /etc/namedot/config.yaml
+    type: config
+    file_info:
+      mode: 0644
+
+  # Systemd service
+  - src: ./packaging/systemd/namedot.service
+    dst: /lib/systemd/system/namedot.service
+    file_info:
+      mode: 0644
+
+  # Create directories
+  - dst: /var/lib/namedot
+    type: dir
+    file_info:
+      mode: 0755
+      owner: namedot
+      group: namedot
+
+  - dst: /var/log/namedot
+    type: dir
+    file_info:
+      mode: 0755
+      owner: namedot
+      group: namedot
+
+  - dst: /var/lib/namedot/geoipdb
+    type: dir
+    file_info:
+      mode: 0755
+      owner: namedot
+      group: namedot
+
+scripts:
+  preinstall: ./packaging/scripts/preinstall.sh
+  postinstall: ./packaging/scripts/postinstall.sh
+  preremove: ./packaging/scripts/preremove.sh
+
+overrides:
+  deb:
+    depends:
+      - systemd
+    recommends:
+      - sqlite3
+  rpm:
+    depends:
+      - systemd
+    recommends:
+      - sqlite
