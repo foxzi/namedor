@@ -2,11 +2,16 @@ package main
 
 import (
     "context"
+    "flag"
+    "fmt"
     "log"
     "os"
     "os/signal"
+    "strings"
     "syscall"
     "time"
+
+    "golang.org/x/crypto/bcrypt"
 
     "namedot/internal/config"
     "namedot/internal/db"
@@ -15,8 +20,73 @@ import (
     restsrv "namedot/internal/server/rest"
 )
 
+// Version is set via -ldflags "-X main.Version=<version>" during build.
+var Version = "dev"
+
 func main() {
-    cfgPath := os.Getenv("SGDNS_CONFIG")
+    // Normalize GNU-style flags ("--flag") to Go's default ("-flag")
+    // to support both -c/--config, -t/--test, -p/--password without extra deps.
+    if len(os.Args) > 1 {
+        norm := make([]string, 0, len(os.Args))
+        norm = append(norm, os.Args[0])
+        for i := 1; i < len(os.Args); i++ {
+            a := os.Args[i]
+            if a == "--" { // end of flags
+                norm = append(norm, a)
+                // append the rest as-is
+                norm = append(norm, os.Args[i+1:]...)
+                break
+            }
+            if strings.HasPrefix(a, "--") {
+                a = "-" + strings.TrimPrefix(a, "--")
+            }
+            norm = append(norm, a)
+        }
+        os.Args = norm
+    }
+
+    var (
+        cfgPath  string
+        testOnly bool
+        password string
+        showVer  bool
+    )
+
+    // Support both short and long variants by binding to the same var
+    flag.StringVar(&cfgPath, "c", "", "path to config file (yaml)")
+    flag.StringVar(&cfgPath, "config", "", "path to config file (yaml)")
+    flag.BoolVar(&testOnly, "t", false, "validate config and exit")
+    flag.BoolVar(&testOnly, "test", false, "validate config and exit")
+    flag.StringVar(&password, "p", "", "generate bcrypt hash for admin password and exit")
+    flag.StringVar(&password, "password", "", "generate bcrypt hash for admin password and exit")
+    flag.BoolVar(&showVer, "v", false, "print version and exit")
+    flag.BoolVar(&showVer, "version", false, "print version and exit")
+    flag.Parse()
+
+    if showVer {
+        fmt.Println(Version)
+        return
+    }
+
+    // If password flag provided, generate bcrypt and exit
+    if password != "" {
+        hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+        if err != nil {
+            log.Fatalf("error generating bcrypt: %v", err)
+        }
+        fmt.Printf("Bcrypt hash for '%s':\n%s\n", password, string(hash))
+        fmt.Println("\nAdd this to your config.yaml:")
+        fmt.Println("admin:")
+        fmt.Println("  enabled: true")
+        fmt.Println("  username: admin")
+        fmt.Printf("  password_hash: \"%s\"\n", string(hash))
+        return
+    }
+
+    // Determine config path precedence: -c/--config > env > default
+    if cfgPath == "" {
+        cfgPath = os.Getenv("SGDNS_CONFIG")
+    }
     if cfgPath == "" {
         cfgPath = "config.yaml"
     }
@@ -24,6 +94,11 @@ func main() {
     cfg, err := config.Load(cfgPath)
     if err != nil {
         log.Fatalf("load config: %v", err)
+    }
+
+    if testOnly {
+        fmt.Printf("Config OK: %s\n", cfgPath)
+        return
     }
 
     gormDB, err := db.Open(cfg.DB)
@@ -82,4 +157,3 @@ func main() {
     _ = restServer.Shutdown(shutdownCtx)
     _ = dnsServer.Shutdown()
 }
-

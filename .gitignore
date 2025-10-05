@@ -34,3 +34,5 @@ test_*.db
 *.swp
 *.swo
 
+# go
+.gopath
