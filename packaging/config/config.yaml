@@ -1,0 +1,51 @@
+# namedot configuration file
+# Documentation: https://github.com/piligrim/namedot
+
+# DNS server settings
+listen: "0.0.0.0:53"
+forwarder: "8.8.8.8"
+enable_dnssec: false
+auto_soa_on_missing: true
+default_ttl: 300
+
+# REST API settings (localhost only for security)
+rest_listen: "127.0.0.1:8080"
+api_token: "CHANGE_ME_PLEASE"
+
+# Database configuration
+db:
+  driver: "sqlite"
+  dsn: "file:/var/lib/namedot/namedot.db?_foreign_keys=on"
+
+# GeoIP configuration
+geoip:
+  enabled: false
+  mmdb_path: "/var/lib/namedot/geoipdb"
+  reload_sec: 300
+  use_ecs: true
+
+# DNS UPDATE (RFC2136) support
+update:
+  enabled: false
+  require_tsig: true
+  tsig_secrets: {}
+
+# Logging
+log:
+  dns_verbose: false
+
+# Performance tuning
+performance:
+  cache_size: 10000
+  dns_timeout_sec: 5
+  forwarder_timeout_sec: 3
+
+# Web Admin Panel (disabled by default)
+admin:
+  enabled: false
+  username: admin
+  password_hash: ""
+
+# Replication (master/slave)
+replication:
+  mode: "standalone"
