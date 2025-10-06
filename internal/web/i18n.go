@@ -95,7 +95,6 @@ var translations = map[string]map[string]string{
         "Edit Template: %s": "Edit Template: %s",
         "Update Template": "Update Template",
         "No records yet. Add records to this template.": "No records yet. Add records to this template.",
-        "Add Record": "Add Record",
         "Error updating template: %s": "Error updating template: %s",
         "Error deleting template": "Error deleting template",
         "Add Template Record": "Add Template Record",
@@ -105,6 +104,18 @@ var translations = map[string]map[string]string{
         "Apply Template": "Apply Template",
         "Zone: %s": "Zone: %s",
         "This will create %d records:": "This will create %d records:",
+
+        // Record edit
+        "Invalid record ID": "Invalid record ID",
+        "Record not found": "Record not found",
+        "RRSet not found": "RRSet not found",
+        "Edit Record": "Edit Record",
+        "Name cannot be changed": "Name cannot be changed",
+        "Type cannot be changed": "Type cannot be changed",
+        "Update Record": "Update Record",
+        "Data is required": "Data is required",
+        "Error updating record: %s": "Error updating record: %s",
+        "Error updating TTL: %s": "Error updating TTL: %s",
     },
     "ru": {
         // General
@@ -198,7 +209,6 @@ var translations = map[string]map[string]string{
         "Edit Template: %s": "Редактировать шаблон: %s",
         "Update Template": "Обновить шаблон",
         "No records yet. Add records to this template.": "Записей пока нет. Добавьте записи.",
-        "Add Record": "Добавить запись",
         "Error updating template: %s": "Ошибка обновления шаблона: %s",
         "Error deleting template": "Ошибка удаления шаблона",
         "Add Template Record": "Добавить запись шаблона",
@@ -208,6 +218,18 @@ var translations = map[string]map[string]string{
         "Apply Template": "Применить шаблон",
         "Zone: %s": "Зона: %s",
         "This will create %d records:": "Будет создано %d записей:",
+
+        // Record edit
+        "Invalid record ID": "Некорректный ID записи",
+        "Record not found": "Запись не найдена",
+        "RRSet not found": "Набор записей (RRSet) не найден",
+        "Edit Record": "Изменить запись",
+        "Name cannot be changed": "Имя нельзя изменить",
+        "Type cannot be changed": "Тип нельзя изменить",
+        "Update Record": "Обновить запись",
+        "Data is required": "Требуются данные",
+        "Error updating record: %s": "Ошибка обновления записи: %s",
+        "Error updating TTL: %s": "Ошибка обновления TTL: %s",
     },
 }
 
@@ -229,25 +251,3 @@ func tr(lang, key string) string {
 func trf(lang, key string, a ...any) string {
     return fmt.Sprintf(tr(lang, key), a...)
 }
-        // Record edit
-        "Invalid record ID": "Invalid record ID",
-        "Record not found": "Record not found",
-        "RRSet not found": "RRSet not found",
-        "Edit Record": "Edit Record",
-        "Name cannot be changed": "Name cannot be changed",
-        "Type cannot be changed": "Type cannot be changed",
-        "Update Record": "Update Record",
-        "Data is required": "Data is required",
-        "Error updating record: %s": "Error updating record: %s",
-        "Error updating TTL: %s": "Error updating TTL: %s",
-        // Record edit
-        "Invalid record ID": "Некорректный ID записи",
-        "Record not found": "Запись не найдена",
-        "RRSet not found": "Набор записей (RRSet) не найден",
-        "Edit Record": "Изменить запись",
-        "Name cannot be changed": "Имя нельзя изменить",
-        "Type cannot be changed": "Тип нельзя изменить",
-        "Update Record": "Обновить запись",
-        "Data is required": "Требуются данные",
-        "Error updating record: %s": "Ошибка обновления записи: %s",
-        "Error updating TTL: %s": "Ошибка обновления TTL: %s",

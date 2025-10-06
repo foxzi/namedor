@@ -194,11 +194,11 @@ func (s *Server) editTemplateForm(c *gin.Context) {
         return
     }
 
-	var template db.Template
-	if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
-		c.String(http.StatusNotFound, "Template not found")
-		return
-	}
+    var template db.Template
+    if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
+        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+        return
+    }
 
     html := fmt.Sprintf(`
     <div style="background: #f7fafc; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
@@ -233,8 +233,12 @@ func (s *Server) editTemplateForm(c *gin.Context) {
                 %s
             </button>
         </div>
-        <div id="template-records">`, template.Name, id, template.Name, template.Description, id)
-    `, s.trf(c, "Edit Template: %s", template.Name), id, s.tr(c, "Template Name"), template.Name, s.tr(c, "Description"), template.Description, s.tr(c, "Update Template"), s.tr(c, "Cancel"), s.tr(c, "Template Records"), id, s.tr(c, "+ Add Record"))
+        <div id="template-records">`,
+        s.trf(c, "Edit Template: %s", template.Name), id,
+        s.tr(c, "Template Name"), template.Name,
+        s.tr(c, "Description"), template.Description,
+        s.tr(c, "Update Template"), s.tr(c, "Cancel"),
+        s.tr(c, "Template Records"), id, s.tr(c, "+ Add Record"))
 
     if len(template.Records) == 0 {
         html += `<p style="color: #718096;">` + s.tr(c, "No records yet. Add records to this template.") + `</p>`
@@ -382,17 +386,17 @@ html := fmt.Sprintf(`
             </div>
 
             <div style="grid-column: span 2;">
-                <strong>` + s.tr(c, "GeoIP Targeting (optional)") + `</strong>
+                <strong>%s</strong>
             </div>
 
             <div>
-                <label>` + s.tr(c, "Country Code") + `</label>
+                <label>%s</label>
                 <input type="text" name="country" maxlength="2" placeholder="RU"
                     style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
             </div>
 
             <div>
-                <label>` + s.tr(c, "Continent Code") + `</label>
+                <label>%s</label>
                 <input type="text" name="continent" maxlength="2" placeholder="EU"
                     style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
             </div>
@@ -417,7 +421,18 @@ html := fmt.Sprintf(`
                 </button>
             </div>
         </form>
-    </div>`, s.tr(c, "Add Template Record"), s.tr(c, "Use placeholders: <code>{domain}</code> for zone name, <code>{subdomain}</code> for custom names"), templateID, s.tr(c, "Name (supports placeholders)"), s.tr(c, "Data (supports placeholders)"), s.tr(c, "Add Record"), templateID, s.tr(c, "Cancel"))
+    </div>`,
+    s.tr(c, "Add Template Record"),
+    s.tr(c, "Use placeholders: <code>{domain}</code> for zone name, <code>{subdomain}</code> for custom names"),
+    templateID,
+    s.tr(c, "Name (supports placeholders)"),
+    s.tr(c, "Data (supports placeholders)"),
+    s.tr(c, "GeoIP Targeting (optional)"),
+    s.tr(c, "Country Code"),
+    s.tr(c, "Continent Code"),
+    s.tr(c, "Add Record"),
+    templateID,
+    s.tr(c, "Cancel"))
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)
