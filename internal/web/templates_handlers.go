@@ -284,7 +284,7 @@ func (s *Server) editTemplateForm(c *gin.Context) {
                         %s
                     </button>
                 </td>
-            </tr>`, rec.Name, rec.Type, rec.TTL, rec.Data, geoInfo, s.tr(c, "Delete this record?"), s.tr(c, "Delete"), rec.ID)
+            </tr>`, rec.Name, rec.Type, rec.TTL, rec.Data, geoInfo, rec.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
 		}
 
 		html += `</tbody></table>`

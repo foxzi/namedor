@@ -140,6 +140,8 @@ html := fmt.Sprintf(`
         asn,
         s.tr(c, "Subnet"),
         subnet,
+        rrset.ZoneID,
+        rrset.ID,
         s.tr(c, "Update Record"),
         rrset.ZoneID,
         s.tr(c, "Cancel"),
