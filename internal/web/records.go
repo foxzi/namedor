@@ -1,9 +1,10 @@
 package web
 
 import (
-	"fmt"
-	"net/http"
-	"strconv"
+    "fmt"
+    "net/http"
+    "strconv"
+    "strings"
 
 	"github.com/gin-gonic/gin"
 	"namedot/internal/db"
@@ -203,7 +204,14 @@ func (s *Server) createRecord(c *gin.Context) {
         return
     }
 
-	name := c.PostForm("name")
+    // Load zone for FQDN normalization
+    var zone db.Zone
+    if err := s.db.First(&zone, zoneID).Error; err != nil {
+        c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
+        return
+    }
+
+    name := c.PostForm("name")
 	recType := c.PostForm("type")
 	data := c.PostForm("data")
 	ttlStr := c.PostForm("ttl")
@@ -217,10 +225,8 @@ func (s *Server) createRecord(c *gin.Context) {
         return
     }
 
-	// Ensure name ends with dot
-	if name[len(name)-1] != '.' {
-		name += "."
-	}
+    // Normalize name to FQDN; handle @/empty as zone apex
+    name = toFQDN(name, zone.Name)
 
 	ttl, _ := strconv.Atoi(ttlStr)
 	if ttl <= 0 {
@@ -282,4 +288,18 @@ func (s *Server) deleteRecord(c *gin.Context) {
     }
 
 	c.Status(http.StatusOK)
+}
+
+// toFQDN normalizes a relative name to FQDN within the given zone name.
+// If name is empty or "@", returns the zone origin with trailing dot.
+func toFQDN(name, zone string) string {
+    n := strings.TrimSpace(strings.ToLower(name))
+    z := strings.TrimSuffix(strings.ToLower(zone), ".")
+    if n == "" || n == "@" {
+        return z + "."
+    }
+    if strings.HasSuffix(n, ".") {
+        return n
+    }
+    return n + "." + z + "."
 }

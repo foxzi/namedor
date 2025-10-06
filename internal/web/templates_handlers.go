@@ -542,9 +542,14 @@ html := fmt.Sprintf(`
                 <tbody>`, s.trf(c, "Apply Template: %s", template.Name), s.trf(c, "Zone: %s", zone.Name), s.trf(c, "This will create %d records:", len(template.Records)), s.tr(c, "Name"), s.tr(c, "Type"), s.tr(c, "TTL"), s.tr(c, "Data"))
 
 	for _, rec := range template.Records {
-		// Preview with placeholders replaced
-		previewName := strings.ReplaceAll(rec.Name, "{domain}", domain)
-		previewData := strings.ReplaceAll(rec.Data, "{domain}", domain)
+        // Preview with placeholders replaced
+        previewName := strings.ReplaceAll(rec.Name, "{domain}", domain)
+        if previewName == "@" {
+            previewName = zone.Name
+        } else if !strings.HasSuffix(previewName, ".") {
+            previewName = previewName + "."
+        }
+        previewData := strings.ReplaceAll(rec.Data, "{domain}", domain)
 
 		html += fmt.Sprintf(`
 			<tr>
