@@ -115,12 +115,10 @@ scripts:
 
 overrides:
   deb:
-    depends:
-      - systemd
     recommends:
+      - systemd
       - sqlite3
   rpm:
-    depends:
-      - systemd
     recommends:
+      - systemd
       - sqlite
