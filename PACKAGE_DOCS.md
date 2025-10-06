@@ -28,11 +28,6 @@ When you install namedot via DEB or RPM package, the following documentation fil
   - Security configuration
   - Usage guide
 
-- **tz.md** - Technical zone documentation:
-  - Zone file format
-  - Record types
-  - Examples
-
 - **LICENSE** - MIT License
 
 ## Accessing Documentation

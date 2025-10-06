@@ -51,7 +51,6 @@ After installation, all documentation is available at `/usr/share/doc/namedot/`:
 - REPLICATION.md - Replication setup guide
 - DOCKER.md - Docker deployment guide
 - WEBADMIN.md - Web admin panel guide
-- tz.md - Zone format reference
 - LICENSE - MIT License
 
 ### From Source
@@ -120,7 +119,7 @@ Examples
 
 REST API (Bearer devtoken)
 - Create zone: `POST /zones {"name":"example.com"}`
-- Add rrset: `POST /zones/{id}/rrsets` with body similar to tz.md
+- Add rrset: `POST /zones/{id}/rrsets`
 - Export: `GET /zones/{id}/export?format=json|bind`
 - Import: `POST /zones/{id}/import?format=json&mode=upsert|replace`
 
@@ -323,7 +322,6 @@ sudo systemctl start namedot
 - REPLICATION.md - Руководство по репликации
 - DOCKER.md - Руководство по Docker
 - WEBADMIN.md - Руководство по веб-панели
-- tz.md - Справка по формату зон
 - LICENSE - Лицензия MIT
 
 ### Из исходников
@@ -393,7 +391,7 @@ CLI флаги
 
 ## REST API (Bearer devtoken)
 - Создать зону: `POST /zones {"name":"example.com"}`
-- Добавить rrset: `POST /zones/{id}/rrsets` с телом аналогичным tz.md
+- Добавить rrset: `POST /zones/{id}/rrsets`
 - Экспорт: `GET /zones/{id}/export?format=json|bind`
 - Импорт: `POST /zones/{id}/import?format=json&mode=upsert|replace`
 
