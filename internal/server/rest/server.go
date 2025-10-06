@@ -208,7 +208,12 @@ type rrsetReq struct {
 }
 
 func fqdn(name, zone string) string {
-    n := strings.TrimSuffix(strings.ToLower(name), ".")
+    n := strings.ToLower(name)
+    // Support convenience syntax: trailing ".@" means "relative to zone apex"
+    if strings.HasSuffix(n, ".@") {
+        n = strings.TrimSuffix(n, ".@")
+    }
+    n = strings.TrimSuffix(n, ".")
     z := strings.TrimSuffix(strings.ToLower(zone), ".")
     if n == "" || n == "@" {
         return z + "."

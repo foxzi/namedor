@@ -295,6 +295,10 @@ func (s *Server) deleteRecord(c *gin.Context) {
 // If name is empty or "@", returns the zone origin with trailing dot.
 func toFQDN(name, zone string) string {
     n := strings.TrimSpace(strings.ToLower(name))
+    // Treat trailing ".@" as convenience suffix for "relative to zone apex"
+    if strings.HasSuffix(n, ".@") {
+        n = strings.TrimSuffix(n, ".@")
+    }
     z := strings.TrimSuffix(strings.ToLower(zone), ".")
     if n == "" || n == "@" {
         return z + "."

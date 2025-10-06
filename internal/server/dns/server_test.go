@@ -7,8 +7,11 @@ import (
     "time"
 
     "github.com/miekg/dns"
+    "gorm.io/driver/sqlite"
+    "gorm.io/gorm"
 
     "namedot/internal/cache"
+    "namedot/internal/config"
     dbm "namedot/internal/db"
     "namedot/internal/geoip"
 )
@@ -62,4 +65,30 @@ func TestCacheResponse_UsesCurrentID(t *testing.T) {
     if got != 222 {
         t.Fatalf("cached response used wrong ID: got %d want 222", got)
     }
+}
+
+func TestLookup_CNAME_Fallback(t *testing.T) {
+    // Setup in-memory DB and server
+    db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+    if err != nil { t.Fatalf("open db: %v", err) }
+    if err := db.AutoMigrate(&dbm.Zone{}, &dbm.RRSet{}, &dbm.RData{}); err != nil { t.Fatalf("migrate: %v", err) }
+
+    cfg := &config.Config{Listen: ":0", RESTListen: ":0", Performance: config.PerformanceConfig{CacheSize: 0, ForwarderTimeoutSec: 1}, GeoIP: config.GeoIPConfig{Enabled: false}}
+    s, err := NewServer(cfg, db)
+    if err != nil { t.Fatalf("new server: %v", err) }
+
+    // Create zone and CNAME at foo.example.com.
+    z := dbm.Zone{Name: "example.com"}
+    if err := db.Create(&z).Error; err != nil { t.Fatalf("create zone: %v", err) }
+    cname := dbm.RRSet{ZoneID: z.ID, Name: "foo.example.com.", Type: "CNAME", TTL: 300, Records: []dbm.RData{{Data: "bar.example.net."}}}
+    if err := db.Create(&cname).Error; err != nil { t.Fatalf("create cname: %v", err) }
+
+    // Query A foo.example.com. should return CNAME rrset
+    q := dns.Question{Name: "foo.example.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+    msg := new(dns.Msg)
+    ans, ttl, err := s.lookup(msg, q, netip.Addr{})
+    if err != nil { t.Fatalf("lookup err: %v", err) }
+    if ttl != 300 { t.Fatalf("ttl want 300 got %d", ttl) }
+    if len(ans) == 0 { t.Fatalf("no answers") }
+    if ans[0].Header().Rrtype != dns.TypeCNAME { t.Fatalf("want CNAME got %s", dns.TypeToString[ans[0].Header().Rrtype]) }
 }

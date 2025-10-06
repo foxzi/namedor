@@ -196,9 +196,22 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 
     // Find RRSet by FQDN name and type
     var set dbm.RRSet
-    if err := s.db.Preload("Records").
+    err = s.db.Preload("Records").
         Where("zone_id = ? AND name = ? AND type = ?", zone.ID, strings.ToLower(qname), strings.ToUpper(qtype)).
-        First(&set).Error; err != nil {
+        First(&set).Error
+    if err != nil {
+        // If exact type not found, try CNAME fallback for this name
+        var cnameSet dbm.RRSet
+        if e2 := s.db.Preload("Records").
+            Where("zone_id = ? AND name = ? AND type = ?", zone.ID, strings.ToLower(qname), "CNAME").
+            First(&cnameSet).Error; e2 == nil {
+            // Return CNAME rrset as the answer; resolvers will chase it
+            for _, rec := range cnameSet.Records {
+                rr, perr := dns.NewRR(fmt.Sprintf("%s %d CNAME %s", qname, cnameSet.TTL, rec.Data))
+                if perr == nil { answers = append(answers, rr) }
+            }
+            return answers, cnameSet.TTL, nil
+        }
         return nil, 0, err
     }
 
