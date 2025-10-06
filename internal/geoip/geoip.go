@@ -149,7 +149,9 @@ func NewFromPath(path string, reload time.Duration, downloadURLs []string, downl
 
                 // Detect database type from metadata and filename
                 isASN := strings.Contains(dbType, "asn") || strings.Contains(name, "asn")
-                isCountry := strings.Contains(dbType, "country") || strings.Contains(name, "country")
+                // Treat City DBs as valid sources for country/continent selection
+                isCountry := strings.Contains(dbType, "country") || strings.Contains(name, "country") ||
+                    strings.Contains(dbType, "city") || strings.Contains(name, "city")
 
                 log.Printf("GeoIP: file %s - is6Hint=%v, isASN=%v, isCountry=%v", e.Name(), is6Hint, isASN, isCountry)
 
@@ -198,12 +200,15 @@ func NewFromPath(path string, reload time.Duration, downloadURLs []string, downl
         } else {
             // Single file mode
             var reader *dbReader
+            var dbType string
             if geoip2Reader, err := geoip2.Open(path); err == nil {
-                reader = &dbReader{geoip2Reader: geoip2Reader}
-                log.Printf("GeoIP: loaded geoip2 DB %s for IPv4/IPv6", path)
+                dbType = strings.ToLower(geoip2Reader.Metadata().DatabaseType)
+                reader = &dbReader{geoip2Reader: geoip2Reader, dbType: dbType}
+                log.Printf("GeoIP: loaded geoip2 DB %s for IPv4/IPv6 (type: %s)", path, dbType)
             } else if rawReader, err := maxminddb.Open(path); err == nil {
-                reader = &dbReader{rawReader: rawReader}
-                log.Printf("GeoIP: loaded maxminddb DB %s for IPv4/IPv6", path)
+                dbType = strings.ToLower(rawReader.Metadata.DatabaseType)
+                reader = &dbReader{rawReader: rawReader, dbType: dbType}
+                log.Printf("GeoIP: loaded maxminddb DB %s for IPv4/IPv6 (type: %s)", path, dbType)
             } else {
                 return fmt.Errorf("open %s: %w", path, err)
             }
@@ -323,9 +328,17 @@ func (m *maxmind) Lookup(ip netip.Addr) Info {
     if r := m.readerFor(ip, "country"); r != nil {
         if r.geoip2Reader != nil {
             // Use geoip2 API for MaxMind databases
-            if rec, err := r.geoip2Reader.Country(nip); err == nil && rec != nil {
-                info.Country = rec.Country.IsoCode
-                info.Continent = rec.Continent.Code
+            // If DB type is City, query City() to extract country/continent
+            if strings.Contains(r.dbType, "city") {
+                if rec, err := r.geoip2Reader.City(nip); err == nil && rec != nil {
+                    info.Country = rec.Country.IsoCode
+                    info.Continent = rec.Continent.Code
+                }
+            } else {
+                if rec, err := r.geoip2Reader.Country(nip); err == nil && rec != nil {
+                    info.Country = rec.Country.IsoCode
+                    info.Continent = rec.Continent.Code
+                }
             }
         } else if r.rawReader != nil {
             // Parse raw maxminddb data
