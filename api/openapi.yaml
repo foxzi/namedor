@@ -1,27 +1,166 @@
 openapi: 3.0.3
 info:
-  title: SmaillGeoDNS API
+  title: namedot API
   version: 0.1.0
 servers:
-  - url: http://localhost:8080
+  - url: http://127.0.0.1:8080
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+  schemas:
+    Zone:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string, example: example.com }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        rrsets:
+          type: array
+          items: { $ref: '#/components/schemas/RRSet' }
+    RRSet:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        zone_id: { type: integer, format: int64 }
+        name: { type: string, example: www.example.com. }
+        type: { type: string, example: A }
+        ttl: { type: integer, minimum: 0, example: 300 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        records:
+          type: array
+          items: { $ref: '#/components/schemas/RData' }
+    RData:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        rrset_id: { type: integer, format: int64 }
+        data: { type: string, example: 192.0.2.10 }
+        country: { type: string, minLength: 2, maxLength: 2, example: US }
+        continent: { type: string, minLength: 2, maxLength: 2, example: EU }
+        asn: { type: integer, example: 65001 }
+        subnet: { type: string, example: 8.8.8.0/24 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CreateZoneRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: example.com }
+    UpsertRRSetRequest:
+      type: object
+      required: [name, type, records]
+      properties:
+        name: { type: string, example: www }
+        type: { type: string, example: A }
+        ttl: { type: integer, minimum: 0, example: 300 }
+        records:
+          type: array
+          items:
+            type: object
+            required: [data]
+            properties:
+              data: { type: string, example: 192.0.2.10 }
+              country: { type: string, minLength: 2, maxLength: 2, example: US }
+              continent: { type: string, minLength: 2, maxLength: 2, example: EU }
+              asn: { type: integer, example: 65001 }
+              subnet: { type: string, example: 8.8.8.0/24 }
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: ok }
+        db: { type: string, example: ok }
+    Template:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        records:
+          type: array
+          items: { $ref: '#/components/schemas/TemplateRecord' }
+    TemplateRecord:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        template_id: { type: integer, format: int64 }
+        name: { type: string }
+        type: { type: string }
+        ttl: { type: integer }
+        data: { type: string }
+        country: { type: string, minLength: 2, maxLength: 2 }
+        continent: { type: string, minLength: 2, maxLength: 2 }
+        asn: { type: integer }
+        subnet: { type: string }
+    SyncData:
+      type: object
+      properties:
+        zones:
+          type: array
+          items: { $ref: '#/components/schemas/Zone' }
+        templates:
+          type: array
+          items: { $ref: '#/components/schemas/Template' }
+  responses:
+    Unauthorized:
+      description: Unauthorized
+    BadRequest:
+      description: Bad Request
+    NotFound:
+      description: Not Found
+    InternalError:
+      description: Internal Server Error
+security:
+  - BearerAuth: []
 paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
   /zones:
     get:
       summary: List zones
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Zone' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       summary: Create zone
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
+            schema: { $ref: '#/components/schemas/CreateZoneRequest' }
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zone' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /zones/{id}:
     get:
       summary: Get zone
@@ -31,7 +170,13 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zone' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       summary: Delete zone
       parameters:
@@ -41,6 +186,8 @@ paths:
           schema: { type: integer }
       responses:
         '204': { description: No Content }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /zones/{id}/rrsets:
     get:
       summary: List rrsets
@@ -50,7 +197,15 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RRSet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       summary: Create rrset
       parameters:
@@ -62,24 +217,16 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                type: { type: string }
-                ttl: { type: integer }
-                records:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      data: { type: string }
-                      country: { type: string }
-                      continent: { type: string }
-                      asn: { type: integer }
-                      subnet: { type: string }
+            schema: { $ref: '#/components/schemas/UpsertRRSetRequest' }
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RRSet' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /zones/{id}/rrsets/{rid}:
     put:
       summary: Update rrset
@@ -92,8 +239,20 @@ paths:
           name: rid
           required: true
           schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertRRSetRequest' }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RRSet' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     patch:
       summary: Patch rrset
       parameters:
@@ -105,8 +264,20 @@ paths:
           name: rid
           required: true
           schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertRRSetRequest' }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RRSet' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       summary: Delete rrset
       parameters:
@@ -120,6 +291,8 @@ paths:
           schema: { type: integer }
       responses:
         '204': { description: No Content }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /zones/{id}/export:
     get:
       summary: Export zone
@@ -132,7 +305,15 @@ paths:
           name: format
           schema: { type: string, enum: [json, bind] }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zone' }
+            text/plain:
+              schema: { type: string, example: "; BIND zone text..." }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /zones/{id}/import:
     post:
       summary: Import zone
@@ -147,6 +328,46 @@ paths:
         - in: query
           name: mode
           schema: { type: string, enum: [upsert, replace] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Zone' }
+          text/plain:
+            schema: { type: string, example: "; BIND zone text..." }
       responses:
         '204': { description: No Content }
-
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /sync/export:
+    get:
+      summary: Export all zones and templates for replication
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /sync/import:
+    post:
+      summary: Import zones and templates from master
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncData' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  zones: { type: integer, example: 1 }
+                  templates: { type: integer, example: 1 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
