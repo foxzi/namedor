@@ -60,8 +60,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
 
 func (s *Server) Start() error {
     dns.HandleFunc(".", s.serveDNS)
-    s.udpServer = &dns.Server{Addr: s.cfg.Listen, Net: "udp", TsigSecret: s.cfg.Update.TSIGSecrets}
-    s.tcpServer = &dns.Server{Addr: s.cfg.Listen, Net: "tcp", TsigSecret: s.cfg.Update.TSIGSecrets}
+    s.udpServer = &dns.Server{Addr: s.cfg.Listen, Net: "udp"}
+    s.tcpServer = &dns.Server{Addr: s.cfg.Listen, Net: "tcp"}
 
     go func() {
         if err := s.udpServer.ListenAndServe(); err != nil {
@@ -92,17 +92,6 @@ func (s *Server) Shutdown() error {
 }
 
 func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
-    // Dynamic update
-    if r.Opcode == dns.OpcodeUpdate {
-        if len(r.Question) > 0 {
-            q := r.Question[0]
-            log.Printf("DNS UPDATE zone=%s from=%s id=%d", q.Name, w.RemoteAddr(), r.Id)
-        } else {
-            log.Printf("DNS UPDATE from=%s id=%d", w.RemoteAddr(), r.Id)
-        }
-        s.handleUpdate(w, r)
-        return
-    }
     m := new(dns.Msg)
     m.SetReply(r)
     m.Authoritative = true
@@ -318,149 +307,4 @@ func selectGeoRecords(recs []dbm.RData, ip netip.Addr, g geoip.Info) ([]dbm.RDat
         return generic, "generic"
     }
     return recs, "all"
-}
-
-// handleUpdate processes RFC 2136 dynamic updates (basic ADD/DELETE semantics).
-func (s *Server) handleUpdate(w dns.ResponseWriter, r *dns.Msg) {
-    // Authorization: TSIG if configured
-    if s.cfg.Update.Enabled {
-        if s.cfg.Update.RequireTSIG {
-            signed := false
-            for _, rr := range r.Extra {
-                if _, ok := rr.(*dns.TSIG); ok {
-                    signed = true
-                    break
-                }
-            }
-            if !signed {
-                m := new(dns.Msg)
-                m.SetReply(r)
-                m.Rcode = dns.RcodeNotAuth
-                _ = w.WriteMsg(m)
-                return
-            }
-        }
-        if len(s.cfg.Update.TSIGSecrets) > 0 {
-            if err := w.TsigStatus(); err != nil {
-                m := new(dns.Msg)
-                m.SetReply(r)
-                m.Rcode = dns.RcodeNotAuth
-                _ = w.WriteMsg(m)
-                return
-            }
-        }
-    } else {
-        m := new(dns.Msg)
-        m.SetReply(r)
-        m.Rcode = dns.RcodeRefused
-        _ = w.WriteMsg(m)
-        return
-    }
-
-    // Zone section must contain one entry specifying the zone
-    if len(r.Question) == 0 {
-        m := new(dns.Msg)
-        m.SetReply(r)
-        m.Rcode = dns.RcodeFormatError
-        _ = w.WriteMsg(m)
-        return
-    }
-    zname := strings.ToLower(dns.Fqdn(r.Question[0].Name))
-    var zone dbm.Zone
-    if err := s.db.Where("name = ?", strings.TrimSuffix(zname, ".")).Or("name = ?", zname).First(&zone).Error; err != nil {
-        m := new(dns.Msg)
-        m.SetReply(r)
-        m.Rcode = dns.RcodeRefused
-        _ = w.WriteMsg(m)
-        return
-    }
-
-    // Process updates from the Update section (r.Ns)
-    err := s.db.Transaction(func(tx *gorm.DB) error {
-        for _, rr := range r.Ns {
-            hdr := rr.Header()
-            name := strings.ToLower(dns.Fqdn(hdr.Name))
-            typ := strings.ToUpper(dns.TypeToString[hdr.Rrtype])
-            cls := hdr.Class
-            // Restrict to this zone
-            if !strings.HasSuffix(name, dns.Fqdn(zone.Name)) {
-                return fmt.Errorf("name outside zone: %s", name)
-            }
-            // Delete all (ANY ANY)
-            if cls == dns.ClassANY && hdr.Rrtype == dns.TypeANY {
-                if err := tx.Where("zone_id = ? AND name = ?", zone.ID, name).Delete(&dbm.RRSet{}).Error; err != nil {
-                    return err
-                }
-                continue
-            }
-            // Delete rrset (ANY <type>)
-            if cls == dns.ClassANY {
-                if err := tx.Where("zone_id = ? AND name = ? AND type = ?", zone.ID, name, typ).Delete(&dbm.RRSet{}).Error; err != nil {
-                    return err
-                }
-                continue
-            }
-            // Delete specific RR (NONE)
-            if cls == dns.ClassNONE {
-                var set dbm.RRSet
-                if err := tx.Preload("Records").Where("zone_id = ? AND name = ? AND type = ?", zone.ID, name, typ).First(&set).Error; err != nil {
-                    continue
-                }
-                data := rrDataString(rr)
-                // delete matching records
-                if err := tx.Where("rr_set_id = ? AND data = ?", set.ID, data).Delete(&dbm.RData{}).Error; err != nil {
-                    return err
-                }
-                continue
-            }
-            // Otherwise: add (IN)
-            var set dbm.RRSet
-            if err := tx.Where("zone_id = ? AND name = ? AND type = ?", zone.ID, name, typ).First(&set).Error; err != nil {
-                ttl := hdr.Ttl
-                if ttl == 0 && s.cfg.DefaultTTL > 0 {
-                    ttl = s.cfg.DefaultTTL
-                }
-                set = dbm.RRSet{ZoneID: zone.ID, Name: name, Type: typ, TTL: ttl}
-                if err := tx.Create(&set).Error; err != nil {
-                    return err
-                }
-            } else if hdr.Ttl > 0 {
-                set.TTL = hdr.Ttl
-                if err := tx.Save(&set).Error; err != nil {
-                    return err
-                }
-            } else if set.TTL == 0 && s.cfg.DefaultTTL > 0 {
-                set.TTL = s.cfg.DefaultTTL
-                if err := tx.Save(&set).Error; err != nil { return err }
-            }
-            rec := dbm.RData{RRSetID: set.ID, Data: rrDataString(rr)}
-            if err := tx.Create(&rec).Error; err != nil {
-                return err
-            }
-        }
-        return nil
-    })
-
-    m := new(dns.Msg)
-    m.SetReply(r)
-    if err != nil {
-        m.Rcode = dns.RcodeServerFailure
-        _ = w.WriteMsg(m)
-        return
-    }
-    // bump SOA serial (best-effort)
-    dbm.BumpSOASerialAuto(s.db, zone, s.cfg.AutoSOAOnMissing)
-
-    m.Rcode = dns.RcodeSuccess
-    _ = w.WriteMsg(m)
-}
-
-// rrDataString extracts the RDATA portion of an RR as a string.
-func rrDataString(rr dns.RR) string {
-    s := rr.String()
-    fields := strings.Fields(s)
-    if len(fields) < 5 {
-        return s
-    }
-    return strings.Join(fields[4:], " ")
 }

@@ -28,12 +28,6 @@ type LogConfig struct {
     DNSVerbose bool `yaml:"dns_verbose"`
 }
 
-type UpdateConfig struct {
-    Enabled     bool              `yaml:"enabled"`
-    RequireTSIG bool              `yaml:"require_tsig"`
-    TSIGSecrets map[string]string `yaml:"tsig_secrets"`
-}
-
 type PerformanceConfig struct {
     CacheSize          int `yaml:"cache_size"`
     DNSTimeoutSec      int `yaml:"dns_timeout_sec"`
@@ -65,7 +59,6 @@ type Config struct {
 
     DB          DBConfig          `yaml:"db"`
     GeoIP       GeoIPConfig       `yaml:"geoip"`
-    Update      UpdateConfig      `yaml:"update"`
     Log         LogConfig         `yaml:"log"`
     Performance PerformanceConfig `yaml:"performance"`
     Admin       AdminConfig       `yaml:"admin"`
@@ -107,10 +100,6 @@ func Load(path string) (*Config, error) {
         if cfg.Admin.Enabled {
             fmt.Fprintf(os.Stderr, "INFO: Admin panel automatically disabled in slave mode\n")
             cfg.Admin.Enabled = false
-        }
-        if cfg.Update.Enabled {
-            fmt.Fprintf(os.Stderr, "INFO: DNS updates automatically disabled in slave mode\n")
-            cfg.Update.Enabled = false
         }
     }
 

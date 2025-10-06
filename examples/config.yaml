@@ -24,12 +24,6 @@ geoip:
 log:
   dns_verbose: true
 
-update:
-  enabled: true
-  require_tsig: true
-  tsig_secrets:
-    keyname.example.: "base64-hmac-secret=="
-
 performance:
   cache_size: 2048
   dns_timeout_sec: 5

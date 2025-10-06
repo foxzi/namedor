@@ -52,7 +52,6 @@ func TestEndToEnd_DNS_and_REST(t *testing.T) {
             DSN:    fmt.Sprintf("file:%s?_foreign_keys=on", tmpDB),
         },
         GeoIP: config.GeoIPConfig{Enabled: false},
-        Update: config.UpdateConfig{Enabled: true, RequireTSIG: false},
     }
 
     // DB

@@ -181,11 +181,6 @@ geoip:
 
 Logs: on startup and during downloads, server logs detailed progress including file sizes, success/failure status, and which GeoIP DBs are loaded.
 
-Dynamic Updates (RFC 2136)
-- Enable via config `update.enabled: true`. Optionally enforce TSIG: `update.require_tsig: true`.
-- Configure `update.tsig_secrets` as a map of keyname to base64 HMAC secret. Example in `examples/config.yaml`.
-- The DNS server processes basic add/delete operations and bumps SOA serial.
-
 BIND Import
 - REST: `POST /zones/{id}/import?format=bind&mode=upsert|replace` with raw zone text in body.
 - Export remains available via `GET /zones/{id}/export?format=bind`.
@@ -193,8 +188,6 @@ BIND Import
 Testing
 - Unit tests (modules):
   - BIND import/export: `go test ./internal/server/rest/zoneio -run TestImportBIND_And_ToBind -count=1`
-  - RFC2136 dynamic updates: `go test ./internal/server/dns -run TestDynamicUpdate_AddAndDelete -count=1`
-  - Default TTL behavior: `go test ./internal/server/dns -run TestDynamicUpdate_DefaultTTLZero_NoOverride -count=1`
 - All tests: `go test ./...`
 - Tests use in-memory SQLite, сетевые сервисы не поднимаются.
 
@@ -271,7 +264,7 @@ Config Reference
   - SERIAL: текущий Unix timestamp
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
-- `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте и при RFC2136 ADD.
+- `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
 
 ---
 
@@ -461,11 +454,6 @@ geoip:
 
 Логи: при запуске и во время скачивания сервер выводит детальный прогресс, включая размеры файлов, статус успеха/неудачи и информацию о загруженных GeoIP базах.
 
-## Динамические обновления (RFC 2136)
-- Включить через конфиг `update.enabled: true`. Опционально принудительно использовать TSIG: `update.require_tsig: true`.
-- Настройте `update.tsig_secrets` как map имени ключа к base64 HMAC секрету. Пример в `examples/config.yaml`.
-- DNS-сервер обрабатывает базовые операции add/delete и увеличивает SOA serial.
-
 ## BIND импорт
 - REST: `POST /zones/{id}/import?format=bind&mode=upsert|replace` с сырым текстом зоны в теле.
 - Экспорт остаётся доступен через `GET /zones/{id}/export?format=bind`.
@@ -473,8 +461,6 @@ geoip:
 ## Тестирование
 - Модульные тесты (модули):
   - BIND импорт/экспорт: `go test ./internal/server/rest/zoneio -run TestImportBIND_And_ToBind -count=1`
-  - RFC2136 динамические обновления: `go test ./internal/server/dns -run TestDynamicUpdate_AddAndDelete -count=1`
-  - Поведение TTL по умолчанию: `go test ./internal/server/dns -run TestDynamicUpdate_DefaultTTLZero_NoOverride -count=1`
 - Все тесты: `go test ./...`
 - Тесты используют in-memory SQLite, сетевые сервисы не поднимаются.
 
@@ -551,7 +537,7 @@ VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s 
   - SERIAL: текущий Unix timestamp
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
-- `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте и при RFC2136 ADD.
+- `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
 
 ## License
 
