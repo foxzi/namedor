@@ -26,12 +26,22 @@ contents:
     file_info:
       mode: 0755
 
+  # Configuration directory
+  - dst: /etc/namedot
+    type: dir
+    file_info:
+      mode: 0750
+      owner: root
+      group: namedot
+
   # Configuration
   - src: ./packaging/config/config.yaml
     dst: /etc/namedot/config.yaml
     type: config
     file_info:
-      mode: 0644
+      mode: 0750
+      owner: root
+      group: namedot
 
   # Systemd service
   - src: ./packaging/systemd/namedot.service
