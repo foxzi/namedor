@@ -10,7 +10,8 @@ default_ttl: 300
 
 # REST API settings (localhost only for security)
 rest_listen: "127.0.0.1:8080"
-api_token: "CHANGE_ME_PLEASE"
+# api_token: "CHANGE_ME_PLEASE"  # Deprecated: use api_token_hash instead
+api_token_hash: ""  # Generate with: namedot --gen-token yourToken
 
 # Database configuration
 db:

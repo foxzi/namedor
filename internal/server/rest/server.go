@@ -8,6 +8,7 @@ import (
     "strings"
 
     "github.com/gin-gonic/gin"
+    "golang.org/x/crypto/bcrypt"
     "gorm.io/gorm"
 
     "namedot/internal/config"
@@ -53,7 +54,26 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
     auth := func(c *gin.Context) {
         token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
-        if s.cfg.APIToken != "" && token != s.cfg.APIToken {
+
+        // Check if token is valid using either hash or plain text
+        authenticated := false
+
+        // Try hashed token first (recommended)
+        if s.cfg.APITokenHash != "" {
+            if err := bcrypt.CompareHashAndPassword([]byte(s.cfg.APITokenHash), []byte(token)); err == nil {
+                authenticated = true
+            }
+        } else if s.cfg.APIToken != "" {
+            // Fallback to plain text comparison (deprecated)
+            if token == s.cfg.APIToken {
+                authenticated = true
+            }
+        } else {
+            // No authentication configured, allow all
+            authenticated = true
+        }
+
+        if !authenticated {
             c.AbortWithStatus(http.StatusUnauthorized)
             return
         }

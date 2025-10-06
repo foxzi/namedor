@@ -55,7 +55,8 @@ type Config struct {
     Listen       string     `yaml:"listen"`
     Forwarder    string     `yaml:"forwarder"`
     EnableDNSSEC bool       `yaml:"enable_dnssec"`
-    APIToken     string     `yaml:"api_token"`
+    APIToken     string     `yaml:"api_token"`      // Plain text token (deprecated, use api_token_hash)
+    APITokenHash string     `yaml:"api_token_hash"` // bcrypt hash of token (recommended)
     RESTListen   string     `yaml:"rest_listen"`
     AutoSOAOnMissing bool   `yaml:"auto_soa_on_missing"`
     DefaultTTL   uint32     `yaml:"default_ttl"`
@@ -167,9 +168,17 @@ func (c *Config) Validate() error {
         return fmt.Errorf("performance.forwarder_timeout_sec must be > 0")
     }
 
-    // Warn if API token is weak (optional, non-fatal)
-    if c.APIToken != "" && len(c.APIToken) < 8 {
-        fmt.Fprintf(os.Stderr, "WARNING: api_token is shorter than 8 characters, consider using a stronger token\n")
+    // Validate API token configuration
+    if c.APIToken != "" && c.APITokenHash != "" {
+        return fmt.Errorf("cannot specify both api_token and api_token_hash, use only api_token_hash (recommended)")
+    }
+
+    // Warn if using plain text token (deprecated)
+    if c.APIToken != "" {
+        fmt.Fprintf(os.Stderr, "WARNING: api_token (plain text) is deprecated, consider using api_token_hash instead\n")
+        if len(c.APIToken) < 8 {
+            fmt.Fprintf(os.Stderr, "WARNING: api_token is shorter than 8 characters, consider using a stronger token\n")
+        }
     }
 
     // Validate replication config
