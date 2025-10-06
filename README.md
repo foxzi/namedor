@@ -118,10 +118,79 @@ Examples
 ```
 
 REST API (Bearer devtoken)
-- Create zone: `POST /zones {"name":"example.com"}`
-- Add rrset: `POST /zones/{id}/rrsets`
-- Export: `GET /zones/{id}/export?format=json|bind`
-- Import: `POST /zones/{id}/import?format=json&mode=upsert|replace`
+- Base URL: `http://127.0.0.1:8080`
+- Auth: header `Authorization: Bearer devtoken`
+
+Examples (curl)
+- Create zone
+  - `curl -sS -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"example.com"}' http://127.0.0.1:8080/zones`
+  - Capture ID (requires jq):
+    - `ZID=$(curl -sS -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+       -d '{"name":"example.com"}' http://127.0.0.1:8080/zones | jq -r .id)`
+
+- List zones
+  - `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones`
+
+- Add A rrset (www)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"A","ttl":300,"records":[{"data":"192.0.2.10"},{"data":"192.0.2.11"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Add AAAA rrset (www)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"AAAA","ttl":300,"records":[{"data":"2001:db8::10"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Add CNAME rrset (api → www.example.com.)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"api","type":"CNAME","ttl":300,"records":[{"data":"www.example.com."}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Add MX rrset (at zone apex)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"@","type":"MX","ttl":3600,"records":[{"data":"10 mail.example.com."}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Add TXT rrset (at zone apex)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"@","type":"TXT","ttl":300,"records":[{"data":"\"hello world\""}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Add Geo A rrset (svc) with selectors
+  - Priority: subnet > asn > country > continent > default
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"svc","type":"A","ttl":60,
+          "records":[
+            {"data":"198.51.100.11","country":"US"},
+            {"data":"198.51.100.12"},
+            {"data":"198.51.100.13","subnet":"8.8.8.0/24"},
+            {"data":"198.51.100.14","continent":"EU"},
+            {"data":"198.51.100.15","asn":65001}
+          ]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- List rrsets
+  - `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Update rrset (PUT) by id (example: change TTL)
+  - `curl -sS -X PUT -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"A","ttl":120,"records":[{"data":"192.0.2.10"},{"data":"192.0.2.11"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets/<RRSET_ID>`
+
+- Delete rrset by id
+  - `curl -sS -X DELETE -H 'Authorization: Bearer devtoken' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets/<RRSET_ID>`
+
+- Export zone
+  - JSON: `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/export?format=json`
+  - BIND: `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/export?format=bind`
+
+- Import zone
+  - JSON (upsert): `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     --data-binary @zone.json "http://127.0.0.1:8080/zones/$ZID/import?format=json&mode=upsert"`
+  - BIND (replace): `curl -sS -X POST -H 'Authorization: Bearer devtoken' --data-binary @zone.bind \
+     "http://127.0.0.1:8080/zones/$ZID/import?format=bind&mode=replace"`
 
 Replication
 - Master-Slave replication via REST API with automatic sync
@@ -390,10 +459,79 @@ CLI флаги
 ```
 
 ## REST API (Bearer devtoken)
-- Создать зону: `POST /zones {"name":"example.com"}`
-- Добавить rrset: `POST /zones/{id}/rrsets`
-- Экспорт: `GET /zones/{id}/export?format=json|bind`
-- Импорт: `POST /zones/{id}/import?format=json&mode=upsert|replace`
+- Базовый URL: `http://127.0.0.1:8080`
+- Аутентификация: заголовок `Authorization: Bearer devtoken`
+
+Примеры (curl)
+- Создать зону
+  - `curl -sS -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"example.com"}' http://127.0.0.1:8080/zones`
+  - Сохранить ID (требуется jq):
+    - `ZID=$(curl -sS -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+       -d '{"name":"example.com"}' http://127.0.0.1:8080/zones | jq -r .id)`
+
+- Список зон
+  - `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones`
+
+- Добавить A rrset (www)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"A","ttl":300,"records":[{"data":"192.0.2.10"},{"data":"192.0.2.11"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Добавить AAAA rrset (www)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"AAAA","ttl":300,"records":[{"data":"2001:db8::10"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Добавить CNAME rrset (api → www.example.com.)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"api","type":"CNAME","ttl":300,"records":[{"data":"www.example.com."}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Добавить MX rrset (на корне зоны)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"@","type":"MX","ttl":3600,"records":[{"data":"10 mail.example.com."}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Добавить TXT rrset (на корне зоны)
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"@","type":"TXT","ttl":300,"records":[{"data":"\"hello world\""}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Добавить Geo A rrset (svc) с селекторами
+  - Приоритет: subnet > asn > country > continent > default
+  - `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"svc","type":"A","ttl":60,
+          "records":[
+            {"data":"198.51.100.11","country":"US"},
+            {"data":"198.51.100.12"},
+            {"data":"198.51.100.13","subnet":"8.8.8.0/24"},
+            {"data":"198.51.100.14","continent":"EU"},
+            {"data":"198.51.100.15","asn":65001}
+          ]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Список rrset
+  - `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/rrsets`
+
+- Обновить rrset (PUT) по id (например, сменить TTL)
+  - `curl -sS -X PUT -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     -d '{"name":"www","type":"A","ttl":120,"records":[{"data":"192.0.2.10"},{"data":"192.0.2.11"}]}' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets/<RRSET_ID>`
+
+- Удалить rrset по id
+  - `curl -sS -X DELETE -H 'Authorization: Bearer devtoken' \
+     http://127.0.0.1:8080/zones/$ZID/rrsets/<RRSET_ID>`
+
+- Экспорт зоны
+  - JSON: `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/export?format=json`
+  - BIND: `curl -sS -H 'Authorization: Bearer devtoken' http://127.0.0.1:8080/zones/$ZID/export?format=bind`
+
+- Импорт зоны
+  - JSON (upsert): `curl -sS -X POST -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+     --data-binary @zone.json "http://127.0.0.1:8080/zones/$ZID/import?format=json&mode=upsert"`
+  - BIND (replace): `curl -sS -X POST -H 'Authorization: Bearer devtoken' --data-binary @zone.bind \
+     "http://127.0.0.1:8080/zones/$ZID/import?format=bind&mode=replace"`
 
 ## Репликация
 - Master-Slave репликация через REST API с автоматической синхронизацией
