@@ -16,10 +16,12 @@ type DBConfig struct {
 }
 
 type GeoIPConfig struct {
-    Enabled   bool   `yaml:"enabled"`
-    MMDBPath  string `yaml:"mmdb_path"`
-    ReloadSec int    `yaml:"reload_sec"`
-    UseECS    bool   `yaml:"use_ecs"`
+    Enabled             bool     `yaml:"enabled"`
+    MMDBPath            string   `yaml:"mmdb_path"`
+    ReloadSec           int      `yaml:"reload_sec"`
+    UseECS              bool     `yaml:"use_ecs"`
+    DownloadURLs        []string `yaml:"download_urls"`
+    DownloadIntervalSec int      `yaml:"download_interval_sec"`
 }
 
 type LogConfig struct {
@@ -152,8 +154,16 @@ func (c *Config) Validate() error {
         return fmt.Errorf("geoip.mmdb_path is required when geoip is enabled")
     }
     if c.GeoIP.Enabled && c.GeoIP.MMDBPath != "" {
-        if _, err := os.Stat(c.GeoIP.MMDBPath); err != nil {
-            return fmt.Errorf("geoip.mmdb_path: %w", err)
+        // If auto-download is configured, create directory if it doesn't exist
+        if len(c.GeoIP.DownloadURLs) > 0 && c.GeoIP.DownloadIntervalSec > 0 {
+            if err := os.MkdirAll(c.GeoIP.MMDBPath, 0755); err != nil {
+                return fmt.Errorf("geoip.mmdb_path: failed to create directory: %w", err)
+            }
+        } else {
+            // No auto-download, require existing directory
+            if _, err := os.Stat(c.GeoIP.MMDBPath); err != nil {
+                return fmt.Errorf("geoip.mmdb_path: %w", err)
+            }
         }
     }
 

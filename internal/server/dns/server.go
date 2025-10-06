@@ -39,7 +39,12 @@ func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
     }
     // GeoIP provider
     if cfg.GeoIP.Enabled && cfg.GeoIP.MMDBPath != "" {
-        prov, stop, err := geoip.NewFromPath(cfg.GeoIP.MMDBPath, time.Duration(cfg.GeoIP.ReloadSec)*time.Second)
+        prov, stop, err := geoip.NewFromPath(
+            cfg.GeoIP.MMDBPath,
+            time.Duration(cfg.GeoIP.ReloadSec)*time.Second,
+            cfg.GeoIP.DownloadURLs,
+            time.Duration(cfg.GeoIP.DownloadIntervalSec)*time.Second,
+        )
         if err != nil {
             log.Printf("GeoIP: %v; disabling GeoDNS", err)
             s.geo = geoip.NewNoop()

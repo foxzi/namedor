@@ -24,6 +24,10 @@ geoip:
   mmdb_path: "/var/lib/namedot/geoipdb"
   reload_sec: 300
   use_ecs: true
+  # download_urls:
+  #   - "https://example.com/GeoLite2-Country.mmdb"
+  #   - "https://example.com/GeoLite2-ASN.mmdb"
+  # download_interval_sec: 86400  # 24 hours
 
 # DNS UPDATE (RFC2136) support
 update:

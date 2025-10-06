@@ -123,7 +123,7 @@ func TestGeoDNS_WithECS_USCountry(t *testing.T) {
 // Try multiple candidate IPs to find one with country/continent/ASN present in the provided MMDBs.
 func pickIPFor(t *testing.T, geoDir string) (ip netip.Addr, info geoip.Info, prov geoip.Provider) {
     t.Helper()
-    p, _, _ := geoip.NewFromPath(geoDir, 0)
+    p, _, _ := geoip.NewFromPath(geoDir, 0, nil, 0)
     prov = p
     candidates := []string{"8.8.8.8", "1.1.1.1", "9.9.9.9"}
     for _, c := range candidates {

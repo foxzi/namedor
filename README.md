@@ -45,6 +45,15 @@ sudo systemctl start namedot
 #### Manual Download
 Download DEB/RPM packages from [Releases](https://github.com/piligrim/namedot/releases)
 
+#### Package Documentation
+After installation, all documentation is available at `/usr/share/doc/namedot/`:
+- README.md - Main documentation
+- REPLICATION.md - Replication setup guide
+- DOCKER.md - Docker deployment guide
+- WEBADMIN.md - Web admin panel guide
+- tz.md - Zone format reference
+- LICENSE - MIT License
+
 ### From Source
 
 Requirements
@@ -68,7 +77,7 @@ db:
 
 geoip:
   enabled: false
-  mmdb_path: "/var/lib/maxmind/GeoLite2-City.mmdb"
+  mmdb_path: "/var/lib/namedot/geoipdb"
   reload_sec: 300
   use_ecs: true
 
@@ -124,13 +133,53 @@ Notes
 - DNSSEC dynamic signing is not implemented yet. You can store DNSSEC records (DNSKEY/RRSIG/DS) in DB and serve them as-is when queried.
 - Geo selection currently supports subnet/country/continent attributes on records. ASN requires GeoIP DB integration and is a TODO.
 
-GeoIP
+GeoIP with Auto-Download
 - Enable in config:
   - `geoip.enabled: true`
   - `geoip.mmdb_path: <path to .mmdb file or directory>`
   - `geoip.use_ecs: true` to honor EDNS Client Subnet
-- File naming: server scans directory and detects DB type by metadata; you can name files e.g. `GeoLite2-City.mmdb`, `GeoLite2-ASN.mmdb`, or `city-ipv4.mmdb`, `city-ipv6.mmdb`, `asn-ipv4.mmdb`, `asn-ipv6.mmdb`. A single City file is applied to both IPv4/IPv6.
-- Logs: on startup, server logs which GeoIP DBs are loaded; if none found or unreadable, it logs an error and disables GeoDNS.
+  - `geoip.download_urls: [list of URLs]` for automatic MMDB downloads
+  - `geoip.download_interval_sec: 86400` for periodic updates (24 hours)
+
+Supported Formats:
+- **MaxMind GeoLite2**: GeoLite2-Country.mmdb, GeoLite2-ASN.mmdb (via geoip2 library)
+- **DBIP**: dbip-country-ipv4.mmdb, dbip-country-ipv6.mmdb, dbip-asn-*.mmdb (via maxminddb library)
+
+The server automatically detects format and database type from file metadata. Only Country and ASN databases are supported (City databases are not needed for GeoDNS).
+
+Configuration Example:
+```yaml
+geoip:
+  enabled: true
+  mmdb_path: "/var/lib/namedot/geoipdb"
+  reload_sec: 300           # Reload databases every 5 minutes
+  use_ecs: true
+  download_urls:
+    - "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
+    - "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-ASN.mmdb"
+  download_interval_sec: 86400  # Download updates every 24 hours
+```
+
+Auto-Download Features:
+- **Initial Download**: If `mmdb_path` directory is empty and `download_urls` are configured, files are downloaded on startup
+- **Periodic Updates**: Files are re-downloaded automatically based on `download_interval_sec`
+- **Hot Reload**: After download, databases are automatically reloaded without service restart
+- **Docker-Friendly**: No cron needed - everything works automatically inside containers
+
+DBIP Alternative (free, updated weekly):
+```yaml
+geoip:
+  enabled: true
+  mmdb_path: "/var/lib/namedot/geoipdb"
+  reload_sec: 300
+  use_ecs: true
+  download_urls:
+    - "https://github.com/sapics/ip-location-db/raw/refs/heads/main/dbip-country-mmdb/dbip-country-ipv4.mmdb"
+    - "https://github.com/sapics/ip-location-db/raw/refs/heads/main/dbip-country-mmdb/dbip-country-ipv6.mmdb"
+  download_interval_sec: 604800  # Weekly updates
+```
+
+Logs: on startup and during downloads, server logs detailed progress including file sizes, success/failure status, and which GeoIP DBs are loaded.
 
 Dynamic Updates (RFC 2136)
 - Enable via config `update.enabled: true`. Optionally enforce TSIG: `update.require_tsig: true`.
@@ -275,6 +324,15 @@ sudo systemctl start namedot
 #### Ручная загрузка
 Скачайте DEB/RPM пакеты из [Releases](https://github.com/piligrim/namedot/releases)
 
+#### Документация в пакете
+После установки вся документация доступна в `/usr/share/doc/namedot/`:
+- README.md - Основная документация
+- REPLICATION.md - Руководство по репликации
+- DOCKER.md - Руководство по Docker
+- WEBADMIN.md - Руководство по веб-панели
+- tz.md - Справка по формату зон
+- LICENSE - Лицензия MIT
+
 ### Из исходников
 
 ## Требования
@@ -299,7 +357,7 @@ db:
 
 geoip:
   enabled: false
-  mmdb_path: "/var/lib/maxmind/GeoLite2-City.mmdb"
+  mmdb_path: "/var/lib/namedot/geoipdb"
   reload_sec: 300
   use_ecs: true
 
@@ -355,13 +413,53 @@ CLI флаги
 - Динамическая подпись DNSSEC пока не реализована. Вы можете хранить DNSSEC-записи (DNSKEY/RRSIG/DS) в БД и отдавать их как есть при запросе.
 - Geo-выбор в настоящее время поддерживает атрибуты subnet/country/continent на записях. ASN требует интеграции GeoIP DB и находится в TODO.
 
-## GeoIP
+## GeoIP с автоматическим скачиванием
 - Включить в конфиге:
   - `geoip.enabled: true`
   - `geoip.mmdb_path: <путь к .mmdb файлу или директории>`
   - `geoip.use_ecs: true` для учета EDNS Client Subnet
-- Именование файлов: сервер сканирует директорию и определяет тип БД по метаданным; вы можете именовать файлы, например, `GeoLite2-City.mmdb`, `GeoLite2-ASN.mmdb`, или `city-ipv4.mmdb`, `city-ipv6.mmdb`, `asn-ipv4.mmdb`, `asn-ipv6.mmdb`. Единый City файл применяется и к IPv4, и к IPv6.
-- Логи: при запуске сервер логирует, какие GeoIP БД загружены; если ни одна не найдена или нечитаема, он логирует ошибку и отключает GeoDNS.
+  - `geoip.download_urls: [список URL]` для автоматического скачивания MMDB
+  - `geoip.download_interval_sec: 86400` для периодических обновлений (24 часа)
+
+Поддерживаемые форматы:
+- **MaxMind GeoLite2**: GeoLite2-Country.mmdb, GeoLite2-ASN.mmdb (через библиотеку geoip2)
+- **DBIP**: dbip-country-ipv4.mmdb, dbip-country-ipv6.mmdb, dbip-asn-*.mmdb (через библиотеку maxminddb)
+
+Сервер автоматически определяет формат и тип базы данных по метаданным файла. Поддерживаются только Country и ASN базы (City базы не нужны для GeoDNS).
+
+Пример конфигурации:
+```yaml
+geoip:
+  enabled: true
+  mmdb_path: "/var/lib/namedot/geoipdb"
+  reload_sec: 300           # Перезагрузка баз каждые 5 минут
+  use_ecs: true
+  download_urls:
+    - "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
+    - "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-ASN.mmdb"
+  download_interval_sec: 86400  # Скачивание обновлений каждые 24 часа
+```
+
+Возможности автоскачивания:
+- **Начальное скачивание**: Если директория `mmdb_path` пуста и настроены `download_urls`, файлы скачиваются при запуске
+- **Периодические обновления**: Файлы автоматически перекачиваются согласно `download_interval_sec`
+- **Горячая перезагрузка**: После скачивания базы автоматически перезагружаются без перезапуска сервиса
+- **Docker-совместимость**: Не нужен cron - всё работает автоматически внутри контейнеров
+
+Альтернатива DBIP (бесплатная, обновляется еженедельно):
+```yaml
+geoip:
+  enabled: true
+  mmdb_path: "/var/lib/namedot/geoipdb"
+  reload_sec: 300
+  use_ecs: true
+  download_urls:
+    - "https://github.com/sapics/ip-location-db/raw/refs/heads/main/dbip-country-mmdb/dbip-country-ipv4.mmdb"
+    - "https://github.com/sapics/ip-location-db/raw/refs/heads/main/dbip-country-mmdb/dbip-country-ipv6.mmdb"
+  download_interval_sec: 604800  # Еженедельные обновления
+```
+
+Логи: при запуске и во время скачивания сервер выводит детальный прогресс, включая размеры файлов, статус успеха/неудачи и информацию о загруженных GeoIP базах.
 
 ## Динамические обновления (RFC 2136)
 - Включить через конфиг `update.enabled: true`. Опционально принудительно использовать TSIG: `update.require_tsig: true`.
