@@ -128,6 +128,7 @@ html := fmt.Sprintf(`
                 <label>%s</label>
                 <input type="text" name="name" placeholder="www" required
                     style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                <small style="color: #718096;">%s</small>
             </div>
 
             <div>
@@ -191,7 +192,7 @@ html := fmt.Sprintf(`
                 </button>
             </div>
         </form>
-	</div>`, s.tr(c, "Add New Record"), zoneID, s.tr(c, "Name"), s.tr(c, "Type"), s.tr(c, "TTL (seconds)"), s.tr(c, "Data (IP/Value)"), s.tr(c, "GeoIP Targeting (optional)"), s.tr(c, "Country Code"), s.tr(c, "Continent Code"), s.tr(c, "ASN"), s.tr(c, "Subnet"), s.tr(c, "Add Record"), zoneID, s.tr(c, "Cancel"))
+    </div>`, s.tr(c, "Add New Record"), zoneID, s.tr(c, "Name"), s.tr(c, "Use '@' for zone apex"), s.tr(c, "Type"), s.tr(c, "TTL (seconds)"), s.tr(c, "Data (IP/Value)"), s.tr(c, "GeoIP Targeting (optional)"), s.tr(c, "Country Code"), s.tr(c, "Continent Code"), s.tr(c, "ASN"), s.tr(c, "Subnet"), s.tr(c, "Add Record"), zoneID, s.tr(c, "Cancel"))
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)
