@@ -49,6 +49,7 @@ func main() {
         cfgPath  string
         testOnly bool
         password string
+        token    string
         showVer  bool
     )
 
@@ -59,6 +60,8 @@ func main() {
     flag.BoolVar(&testOnly, "test", false, "validate config and exit")
     flag.StringVar(&password, "p", "", "generate bcrypt hash for admin password and exit")
     flag.StringVar(&password, "password", "", "generate bcrypt hash for admin password and exit")
+    flag.StringVar(&token, "g", "", "generate bcrypt hash for api token and exit")
+    flag.StringVar(&token, "gen-token", "", "generate bcrypt hash for api token and exit")
     flag.BoolVar(&showVer, "v", false, "print version and exit")
     flag.BoolVar(&showVer, "version", false, "print version and exit")
     flag.Parse()
@@ -80,6 +83,23 @@ func main() {
         fmt.Println("  enabled: true")
         fmt.Println("  username: admin")
         fmt.Printf("  password_hash: \"%s\"\n", string(hash))
+        return
+    }
+
+    // If token flag provided, generate bcrypt and exit
+    if token != "" {
+        hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+        if err != nil {
+            log.Fatalf("error generating bcrypt: %v", err)
+        }
+        fmt.Printf("Bcrypt hash for API token '%s':\n%s\n", token, string(hash))
+        fmt.Println("\nAdd this to your config.yaml:")
+        fmt.Printf("api_token_hash: \"%s\"\n", string(hash))
+        fmt.Println("\nFor replication slave config:")
+        fmt.Println("replication:")
+        fmt.Println("  mode: slave")
+        fmt.Println("  master_url: \"http://master:8080\"")
+        fmt.Printf("  api_token: \"%s\"  # Use plain token for outgoing requests\n", token)
         return
     }
 

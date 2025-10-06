@@ -84,6 +84,7 @@ Command-line flags
 - `-c, --config`: path to config file (YAML). Example: `./namedot --config config.yaml`
 - `-t, --test`: validate config and exit. Example: `./namedot --test`
 - `-p, --password`: generate bcrypt hash for admin password and exit. Example: `./namedot --password mySecret`
+- `-g, --gen-token`: generate bcrypt hash for API token and exit. Example: `./namedot --gen-token myToken`
 - `-v, --version`: print version and exit. Example: `./namedot --version`
 
 Environment and precedence
@@ -100,6 +101,9 @@ Examples
 
 # Generate bcrypt hash for admin password
 ./namedot --password 'MyStr0ng!P@ssw0rd'
+
+# Generate bcrypt hash for API token
+./namedot --gen-token 'mySecureToken123'
 
 # Print version
 ./namedot --version
@@ -311,6 +315,7 @@ CLI флаги
 - `-c, --config`: путь к конфигу (YAML). Пример: `./namedot --config config.yaml`
 - `-t, --test`: проверить конфиг и выйти. Пример: `./namedot --test`
 - `-p, --password`: сгенерировать bcrypt-хеш для пароля админки и выйти. Пример: `./namedot --password mySecret`
+- `-g, --gen-token`: сгенерировать bcrypt-хеш для API токена и выйти. Пример: `./namedot --gen-token myToken`
 - `-v, --version`: вывести версию и выйти. Пример: `./namedot --version`
 
 Окружение и приоритеты
@@ -327,6 +332,9 @@ CLI флаги
 
 # Генерация bcrypt-хеша для пароля админки
 ./namedot --password 'MyStr0ng!P@ssw0rd'
+
+# Генерация bcrypt-хеша для API токена
+./namedot --gen-token 'mySecureToken123'
 
 # Вывести версию
 ./namedot --version

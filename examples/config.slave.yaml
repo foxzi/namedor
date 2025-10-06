@@ -1,7 +1,9 @@
 listen: "0.0.0.0:53"
 forwarder: ""
 enable_dnssec: false
-api_token: "your-secure-token-here"
+# Local REST API token (for incoming requests to slave)
+# api_token: "your-secure-token-here"  # Deprecated: use api_token_hash instead
+api_token_hash: ""  # Generate with: ./namedot --gen-token yourToken
 rest_listen: "0.0.0.0:8080"
 auto_soa_on_missing: true
 default_ttl: 300
