@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoDNS Admin - Dashboard</title>
+    <title>{{ t .Lang "GeoDNS Admin" }} - Dashboard</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -123,50 +123,53 @@
 </head>
 <body>
     <div class="navbar">
-        <h1>GeoDNS Admin</h1>
+        <h1>{{ t .Lang "GeoDNS Admin" }}</h1>
         <div class="user-info">
             <span class="username">{{.Username}}</span>
-            <a href="/admin/logout">Logout</a>
+            <a href="/admin/logout">{{ t .Lang "Logout" }}</a>
+            <span style="color:#a0aec0">|</span>
+            <a href="/admin/lang/en">{{ t .Lang "EN" }}</a>
+            <a href="/admin/lang/ru" style="margin-left:6px;">{{ t .Lang "RU" }}</a>
         </div>
     </div>
 
     <div class="container">
         <div class="tabs">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('zones')">DNS Zones</button>
-                <button class="tab-button" onclick="showTab('templates')">Templates</button>
-                <button class="tab-button" onclick="showTab('logs')">Query Logs</button>
+                <button class="tab-button active" onclick="showTab('zones')">{{ t .Lang "DNS Zones" }}</button>
+                <button class="tab-button" onclick="showTab('templates')">{{ t .Lang "Templates" }}</button>
+                <button class="tab-button" onclick="showTab('logs')">{{ t .Lang "Query Logs" }}</button>
             </div>
 
             <div class="tab-content">
                 <div id="zones-tab">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2>DNS Zones</h2>
+                        <h2>{{ t .Lang "DNS Zones" }}</h2>
                         <button class="btn" hx-get="/admin/zones/new" hx-target="#zones-list" hx-swap="beforeend">
-                            + New Zone
+                            {{ t .Lang "+ New Zone" }}
                         </button>
                     </div>
                     <div id="zones-list" hx-get="/admin/zones" hx-trigger="load" hx-swap="innerHTML">
-                        Loading...
+                        {{ t .Lang "Loading..." }}
                     </div>
                 </div>
 
                 <div id="templates-tab" style="display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2>DNS Templates</h2>
+                        <h2>{{ t .Lang "DNS Templates" }}</h2>
                         <button class="btn" hx-get="/admin/templates/new" hx-target="#templates-content" hx-swap="innerHTML">
-                            + New Template
+                            {{ t .Lang "+ New Template" }}
                         </button>
                     </div>
                     <div id="templates-content" hx-get="/admin/templates" hx-trigger="load" hx-swap="innerHTML">
-                        Loading...
+                        {{ t .Lang "Loading..." }}
                     </div>
                 </div>
 
                 <div id="logs-tab" style="display: none;">
-                    <h2>DNS Query Logs</h2>
+                    <h2>{{ t .Lang "Query Logs" }}</h2>
                     <div id="logs-list">
-                        <div class="empty-state">Query logs viewer coming soon...</div>
+                        <div class="empty-state">{{ t .Lang "Query logs viewer coming soon..." }}</div>
                     </div>
                 </div>
             </div>
@@ -207,7 +210,7 @@
                         }
                     });
 
-                    selector += '<button class="btn btn-sm" style="background: #718096;" onclick="document.getElementById(\'template-selector-' + zoneId + '\').innerHTML=\'\'">Cancel</button></div></div>';
+                    selector += '<button class="btn btn-sm" style="background: #718096;" onclick="document.getElementById(\'template-selector-' + zoneId + '\').innerHTML=\'\'">{{ t .Lang "Cancel" }}</button></div></div>';
                     container.innerHTML = selector;
                     htmx.process(container);
                 });

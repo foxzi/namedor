@@ -32,14 +32,18 @@ type Session struct {
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
-	if !cfg.Admin.Enabled {
-		return nil, nil
-	}
+    if !cfg.Admin.Enabled {
+        return nil, nil
+    }
 
-	tmpl, err := template.ParseFS(templatesFS, "templates/*.html")
-	if err != nil {
-		return nil, err
-	}
+    funcMap := template.FuncMap{
+        // Usage in templates: {{ t .Lang "Key" }}
+        "t": func(lang, key string) string { return tr(lang, key) },
+    }
+    tmpl, err := template.New("root").Funcs(funcMap).ParseFS(templatesFS, "templates/*.html")
+    if err != nil {
+        return nil, err
+    }
 
 	return &Server{
 		cfg:      cfg,
@@ -54,9 +58,10 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 		return
 	}
 
-	// Public routes
-	r.GET("/admin/login", s.loginPage)
-	r.POST("/admin/login", s.loginSubmit)
+    // Public routes
+    r.GET("/admin/login", s.loginPage)
+    r.POST("/admin/login", s.loginSubmit)
+    r.GET("/admin/lang/:code", s.setLang)
 
 	// Protected routes
 	admin := r.Group("/admin")
@@ -120,8 +125,8 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 
 // Login handlers
 func (s *Server) loginPage(c *gin.Context) {
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	s.tmpl.ExecuteTemplate(c.Writer, "login.html", nil)
+    c.Header("Content-Type", "text/html; charset=utf-8")
+    s.tmpl.ExecuteTemplate(c.Writer, "login.html", gin.H{ "Lang": s.getLang(c) })
 }
 
 func (s *Server) loginSubmit(c *gin.Context) {
@@ -129,19 +134,19 @@ func (s *Server) loginSubmit(c *gin.Context) {
 	password := c.PostForm("password")
 
 	// Validate credentials
-	if username != s.cfg.Admin.Username {
-		c.Header("HX-Retarget", "#error")
-		c.Header("HX-Reswap", "innerHTML")
-		c.String(http.StatusUnauthorized, `<div class="error">Invalid username or password</div>`)
-		return
-	}
+    if username != s.cfg.Admin.Username {
+        c.Header("HX-Retarget", "#error")
+        c.Header("HX-Reswap", "innerHTML")
+        c.String(http.StatusUnauthorized, `<div class="error">`+s.tr(c, "Invalid username or password")+`</div>`)
+        return
+    }
 
-	if err := bcrypt.CompareHashAndPassword([]byte(s.cfg.Admin.PasswordHash), []byte(password)); err != nil {
-		c.Header("HX-Retarget", "#error")
-		c.Header("HX-Reswap", "innerHTML")
-		c.String(http.StatusUnauthorized, `<div class="error">Invalid username or password</div>`)
-		return
-	}
+    if err := bcrypt.CompareHashAndPassword([]byte(s.cfg.Admin.PasswordHash), []byte(password)); err != nil {
+        c.Header("HX-Retarget", "#error")
+        c.Header("HX-Reswap", "innerHTML")
+        c.String(http.StatusUnauthorized, `<div class="error">`+s.tr(c, "Invalid username or password")+`</div>`)
+        return
+    }
 
 	// Create session
 	sessionID := s.generateSessionID()
@@ -164,11 +169,12 @@ func (s *Server) logout(c *gin.Context) {
 }
 
 func (s *Server) dashboard(c *gin.Context) {
-	username, _ := c.Get("username")
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	s.tmpl.ExecuteTemplate(c.Writer, "dashboard.html", gin.H{
-		"Username": username,
-	})
+    username, _ := c.Get("username")
+    c.Header("Content-Type", "text/html; charset=utf-8")
+    s.tmpl.ExecuteTemplate(c.Writer, "dashboard.html", gin.H{
+        "Username": username,
+        "Lang": s.getLang(c),
+    })
 }
 
 func (s *Server) generateSessionID() string {
@@ -178,6 +184,39 @@ func (s *Server) generateSessionID() string {
 }
 
 // HashPassword generates bcrypt hash for password (utility function)
+
+// i18n helpers
+func (s *Server) getLang(c *gin.Context) string {
+    if v, err := c.Cookie("lang"); err == nil {
+        if v == "ru" || v == "en" { return v }
+    }
+    // simple accept-language sniff
+    if al := c.GetHeader("Accept-Language"); al != "" {
+        if len(al) >= 2 {
+            p := al[:2]
+            if p == "ru" { return "ru" }
+        }
+    }
+    return "en"
+}
+
+func (s *Server) setLang(c *gin.Context) {
+    code := c.Param("code")
+    if code != "en" && code != "ru" { code = "en" }
+    // 365 days
+    c.SetCookie("lang", code, 365*24*3600, "/", "", false, true)
+    ref := c.Request.Referer()
+    if ref == "" { ref = "/admin" }
+    c.Redirect(http.StatusFound, ref)
+}
+
+func (s *Server) tr(c *gin.Context, key string) string {
+    return tr(s.getLang(c), key)
+}
+
+func (s *Server) trf(c *gin.Context, key string, a ...any) string {
+    return trf(s.getLang(c), key, a...)
+}
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(hash), err

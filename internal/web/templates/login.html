@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoDNS Admin - Login</title>
+    <title>{{ t .Lang "GeoDNS Admin" }} - {{ t .Lang "Login" }}</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -77,18 +77,18 @@
 </head>
 <body>
     <div class="login-container">
-        <h1>GeoDNS Admin</h1>
+        <h1>{{ t .Lang "GeoDNS Admin" }}</h1>
         <div id="error"></div>
         <form hx-post="/admin/login" hx-target="#error">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">{{ t .Lang "Username" }}</label>
                 <input type="text" id="username" name="username" required autofocus>
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">{{ t .Lang "Password" }}</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit">Login</button>
+            <button type="submit">{{ t .Lang "Login" }}</button>
         </form>
     </div>
 </body>

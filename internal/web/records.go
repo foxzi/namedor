@@ -26,58 +26,58 @@ func intPtr(i int) *int {
 
 func (s *Server) listRecords(c *gin.Context) {
 	zoneID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.String(http.StatusBadRequest, "Invalid zone ID")
-		return
-	}
+    if err != nil {
+        c.String(http.StatusBadRequest, s.tr(c, "Invalid zone ID"))
+        return
+    }
 
-	var zone db.Zone
-	if err := s.db.First(&zone, zoneID).Error; err != nil {
-		c.String(http.StatusNotFound, "Zone not found")
-		return
-	}
+    var zone db.Zone
+    if err := s.db.First(&zone, zoneID).Error; err != nil {
+        c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
+        return
+    }
 
 	var rrsets []db.RRSet
-	if err := s.db.Where("zone_id = ?", zoneID).Preload("Records").Find(&rrsets).Error; err != nil {
-		c.String(http.StatusInternalServerError, "Error loading records")
-		return
-	}
+    if err := s.db.Where("zone_id = ?", zoneID).Preload("Records").Find(&rrsets).Error; err != nil {
+        c.String(http.StatusInternalServerError, s.tr(c, "Error loading records"))
+        return
+    }
 
 	html := fmt.Sprintf(`
 	<div style="margin-bottom: 1rem;">
 		<button class="btn" style="background: #718096;" hx-get="/admin/zones" hx-target="#zones-list" hx-swap="innerHTML">
-			← Back to Zones
+			%s
 		</button>
-		<h2 style="margin-top: 1rem;">Records for %s</h2>
+		<h2 style="margin-top: 1rem;">%s</h2>
 	</div>
 	<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
 		<button class="btn" hx-get="/admin/zones/%d/records/new" hx-target="#records-list" hx-swap="beforebegin">
-			+ Add Record
+			%s
 		</button>
 		<button class="btn" style="background: #48bb78;"
 			onclick="showTemplateSelector(%d)">
-			📋 Apply Template
+			%s
 		</button>
 	</div>
 	<div id="template-selector-%d"></div>
-	<div id="records-list">`, zone.Name, zoneID, zoneID, zoneID)
+	<div id="records-list">`, s.tr(c, "← Back to Zones"), s.trf(c, "Records for %s", zone.Name), zoneID, s.tr(c, "+ Add Record"), zoneID, s.tr(c, "📋 Apply Template"), zoneID)
 
 	if len(rrsets) == 0 {
-		html += `<div class="empty-state">No records found. Add your first record!</div>`
+		html += `<div class="empty-state">` + s.tr(c, "No records found. Add your first record!") + `</div>`
 	} else {
-		html += `<table><thead><tr><th>Name</th><th>Type</th><th>TTL</th><th>GeoIP</th><th>Data</th><th>Actions</th></tr></thead><tbody>`
+		html += `<table><thead><tr><th>` + s.tr(c, "Name") + `</th><th>` + s.tr(c, "Type") + `</th><th>` + s.tr(c, "TTL") + `</th><th>` + s.tr(c, "GeoIP") + `</th><th>` + s.tr(c, "Data") + `</th><th>` + s.tr(c, "Actions") + `</th></tr></thead><tbody>`
 
 		for _, rr := range rrsets {
 			for _, record := range rr.Records {
 				geoInfo := "Default"
 				if record.Country != nil && *record.Country != "" {
-					geoInfo = fmt.Sprintf("Country: %s", *record.Country)
+					geoInfo = s.trf(c, "Country: %s", *record.Country)
 				} else if record.Continent != nil && *record.Continent != "" {
-					geoInfo = fmt.Sprintf("Continent: %s", *record.Continent)
+					geoInfo = s.trf(c, "Continent: %s", *record.Continent)
 				} else if record.ASN != nil && *record.ASN != 0 {
-					geoInfo = fmt.Sprintf("ASN: %d", *record.ASN)
+					geoInfo = s.trf(c, "ASN: %d", *record.ASN)
 				} else if record.Subnet != nil && *record.Subnet != "" {
-					geoInfo = fmt.Sprintf("Subnet: %s", *record.Subnet)
+					geoInfo = s.trf(c, "Subnet: %s", *record.Subnet)
 				}
 
 				html += fmt.Sprintf(`
@@ -88,21 +88,21 @@ func (s *Server) listRecords(c *gin.Context) {
 					<td><em>%s</em></td>
 					<td><code>%s</code></td>
 					<td class="actions">
-						<button class="btn btn-sm"
-							hx-get="/admin/records/%d/edit"
-							hx-target="#zones-list"
-							hx-swap="innerHTML">
-							Edit
-						</button>
-						<button class="btn btn-sm btn-danger"
-							hx-delete="/admin/records/%d"
-							hx-confirm="Delete this record?"
-							hx-target="closest tr"
-							hx-swap="outerHTML">
-							Delete
-						</button>
-					</td>
-				</tr>`, rr.Name, rr.Type, rr.TTL, geoInfo, record.Data, record.ID, record.ID)
+					<button class="btn btn-sm"
+						hx-get="/admin/records/%d/edit"
+						hx-target="#zones-list"
+						hx-swap="innerHTML">
+						%s
+					</button>
+					<button class="btn btn-sm btn-danger"
+						hx-delete="/admin/records/%d"
+						hx-confirm="%s"
+						hx-target="closest tr"
+						hx-swap="outerHTML">
+						%s
+					</button>
+				</td>
+				</tr>`, rr.Name, rr.Type, rr.TTL, geoInfo, record.Data, record.ID, s.tr(c, "Edit"), record.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
 			}
 		}
 
@@ -117,91 +117,91 @@ func (s *Server) listRecords(c *gin.Context) {
 func (s *Server) newRecordForm(c *gin.Context) {
 	zoneID := c.Param("id")
 
-	html := fmt.Sprintf(`
-	<div style="background: #f7fafc; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-		<h3>Add New Record</h3>
-		<form hx-post="/admin/zones/%s/records" hx-target="#zones-list" hx-swap="innerHTML"
-			style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+html := fmt.Sprintf(`
+    <div style="background: #f7fafc; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        <h3>%s</h3>
+        <form hx-post="/admin/zones/%s/records" hx-target="#zones-list" hx-swap="innerHTML"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
 
-			<div>
-				<label>Name</label>
-				<input type="text" name="name" placeholder="www" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="text" name="name" placeholder="www" required
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div>
-				<label>Type</label>
-				<select name="type" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-					<option value="A">A</option>
-					<option value="AAAA">AAAA</option>
-					<option value="CNAME">CNAME</option>
-					<option value="MX">MX</option>
-					<option value="TXT">TXT</option>
-					<option value="NS">NS</option>
-				</select>
-			</div>
+            <div>
+                <label>%s</label>
+                <select name="type" required
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                    <option value="A">A</option>
+                    <option value="AAAA">AAAA</option>
+                    <option value="CNAME">CNAME</option>
+                    <option value="MX">MX</option>
+                    <option value="TXT">TXT</option>
+                    <option value="NS">NS</option>
+                </select>
+            </div>
 
-			<div>
-				<label>TTL (seconds)</label>
-				<input type="number" name="ttl" value="300" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="number" name="ttl" value="300" required
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div>
-				<label>Data (IP/Value)</label>
-				<input type="text" name="data" placeholder="192.0.2.1" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="text" name="data" placeholder="192.0.2.1" required
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div style="grid-column: span 2;">
-				<strong>GeoIP Targeting (optional)</strong>
-			</div>
+            <div style="grid-column: span 2;">
+                <strong>%s</strong>
+            </div>
 
-			<div>
-				<label>Country Code</label>
-				<input type="text" name="country" placeholder="RU" maxlength="2"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="text" name="country" placeholder="RU" maxlength="2"
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div>
-				<label>Continent Code</label>
-				<input type="text" name="continent" placeholder="EU" maxlength="2"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="text" name="continent" placeholder="EU" maxlength="2"
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div>
-				<label>ASN</label>
-				<input type="number" name="asn" placeholder="65001"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="number" name="asn" placeholder="65001"
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div>
-				<label>Subnet</label>
-				<input type="text" name="subnet" placeholder="10.0.0.0/8"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+            <div>
+                <label>%s</label>
+                <input type="text" name="subnet" placeholder="10.0.0.0/8"
+                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </div>
 
-			<div style="grid-column: span 2; display: flex; gap: 1rem;">
-				<button type="submit" class="btn">Add Record</button>
-				<button type="button" class="btn" style="background: #718096;"
-					hx-get="/admin/zones/%s/records" hx-target="#zones-list" hx-swap="innerHTML">
-					Cancel
-				</button>
-			</div>
-		</form>
-	</div>`, zoneID, zoneID)
+            <div style="grid-column: span 2; display: flex; gap: 1rem;">
+                <button type="submit" class="btn">%s</button>
+                <button type="button" class="btn" style="background: #718096;"
+                    hx-get="/admin/zones/%s/records" hx-target="#zones-list" hx-swap="innerHTML">
+                    %s
+                </button>
+            </div>
+        </form>
+	</div>`, s.tr(c, "Add New Record"), zoneID, s.tr(c, "Name"), s.tr(c, "Type"), s.tr(c, "TTL (seconds)"), s.tr(c, "Data (IP/Value)"), s.tr(c, "GeoIP Targeting (optional)"), s.tr(c, "Country Code"), s.tr(c, "Continent Code"), s.tr(c, "ASN"), s.tr(c, "Subnet"), s.tr(c, "Add Record"), zoneID, s.tr(c, "Cancel"))
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)
 }
 
 func (s *Server) createRecord(c *gin.Context) {
-	zoneID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.String(http.StatusBadRequest, "Invalid zone ID")
-		return
-	}
+    zoneID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+    if err != nil {
+        c.String(http.StatusBadRequest, s.tr(c, "Invalid zone ID"))
+        return
+    }
 
 	name := c.PostForm("name")
 	recType := c.PostForm("type")
@@ -212,10 +212,10 @@ func (s *Server) createRecord(c *gin.Context) {
 	asnStr := c.PostForm("asn")
 	subnet := c.PostForm("subnet")
 
-	if name == "" || recType == "" || data == "" {
-		c.String(http.StatusBadRequest, `<div class="error">Name, type, and data are required</div>`)
-		return
-	}
+    if name == "" || recType == "" || data == "" {
+        c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Name, type, and data are required")+`</div>`)
+        return
+    }
 
 	// Ensure name ends with dot
 	if name[len(name)-1] != '.' {
@@ -243,11 +243,11 @@ func (s *Server) createRecord(c *gin.Context) {
 			Type:   recType,
 			TTL:    uint32(ttl),
 		}
-		if err := s.db.Create(&rrset).Error; err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Error creating record set: %s", err.Error()))
-			return
-		}
-	}
+        if err := s.db.Create(&rrset).Error; err != nil {
+            c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record set: %s"), err.Error()))
+            return
+        }
+    }
 
 	// Add record data
 	record := db.RData{
@@ -259,10 +259,10 @@ func (s *Server) createRecord(c *gin.Context) {
 		Subnet:    stringPtr(subnet),
 	}
 
-	if err := s.db.Create(&record).Error; err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Error creating record: %s", err.Error()))
-		return
-	}
+    if err := s.db.Create(&record).Error; err != nil {
+        c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record: %s"), err.Error()))
+        return
+    }
 
 	// Return updated records list
 	c.Params = append(c.Params, gin.Param{Key: "id", Value: fmt.Sprintf("%d", zoneID)})
@@ -271,15 +271,15 @@ func (s *Server) createRecord(c *gin.Context) {
 
 func (s *Server) deleteRecord(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.Status(http.StatusBadRequest)
-		return
-	}
+    if err != nil {
+        c.Status(http.StatusBadRequest)
+        return
+    }
 
-	if err := s.db.Delete(&db.RData{}, id).Error; err != nil {
-		c.String(http.StatusInternalServerError, "Error deleting record")
-		return
-	}
+    if err := s.db.Delete(&db.RData{}, id).Error; err != nil {
+        c.String(http.StatusInternalServerError, s.tr(c, "Error deleting record"))
+        return
+    }
 
 	c.Status(http.StatusOK)
 }
