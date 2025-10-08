@@ -4,6 +4,9 @@ enable_dnssec: false
 # api_token: "devtoken"  # Deprecated: use api_token_hash instead
 api_token_hash: ""  # Generate with: ./namedot --gen-token yourToken
 rest_listen: ":7070"
+# tls_cert_file: "/path/to/cert.pem"  # Path to TLS certificate for HTTPS
+# tls_key_file: "/path/to/key.pem"    # Path to TLS private key for HTTPS
+# tls_reload_sec: 3600                # Reload certificate every N seconds (default: 3600)
 auto_soa_on_missing: true
 default_ttl: 300
 

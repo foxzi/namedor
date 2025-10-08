@@ -54,6 +54,9 @@ type Config struct {
     APIToken     string     `yaml:"api_token"`      // Plain text token (deprecated, use api_token_hash)
     APITokenHash string     `yaml:"api_token_hash"` // bcrypt hash of token (recommended)
     RESTListen   string     `yaml:"rest_listen"`
+    TLSCertFile  string     `yaml:"tls_cert_file"`  // Path to TLS certificate file for HTTPS
+    TLSKeyFile   string     `yaml:"tls_key_file"`   // Path to TLS private key file for HTTPS
+    TLSReloadSec int        `yaml:"tls_reload_sec"` // Certificate reload interval in seconds (0 = no reload)
     AutoSOAOnMissing bool   `yaml:"auto_soa_on_missing"`
     DefaultTTL   uint32     `yaml:"default_ttl"`
 
@@ -93,6 +96,9 @@ func Load(path string) (*Config, error) {
     }
     if cfg.Replication.SyncIntervalSec == 0 && cfg.Replication.Mode == "slave" {
         cfg.Replication.SyncIntervalSec = 60 // Default: 60 seconds
+    }
+    if cfg.TLSReloadSec == 0 && cfg.IsTLSEnabled() {
+        cfg.TLSReloadSec = 3600 // Default: 3600 seconds (1 hour)
     }
 
     // Auto-disable modifications on slave servers
@@ -193,7 +199,25 @@ func (c *Config) Validate() error {
         }
     }
 
+    // Validate TLS config
+    if (c.TLSCertFile != "" && c.TLSKeyFile == "") || (c.TLSCertFile == "" && c.TLSKeyFile != "") {
+        return fmt.Errorf("both tls_cert_file and tls_key_file must be specified together")
+    }
+    if c.TLSCertFile != "" && c.TLSKeyFile != "" {
+        if _, err := os.Stat(c.TLSCertFile); err != nil {
+            return fmt.Errorf("tls_cert_file: %w", err)
+        }
+        if _, err := os.Stat(c.TLSKeyFile); err != nil {
+            return fmt.Errorf("tls_key_file: %w", err)
+        }
+    }
+
     return nil
+}
+
+// IsTLSEnabled returns true if TLS is configured for REST API
+func (c *Config) IsTLSEnabled() bool {
+    return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
 // validateAddr validates host:port address format

@@ -2,10 +2,12 @@ package rest
 
 import (
     "context"
+    "crypto/tls"
     "fmt"
     "log"
     "net/http"
     "strings"
+    "time"
 
     "github.com/gin-gonic/gin"
     "golang.org/x/crypto/bcrypt"
@@ -18,9 +20,11 @@ import (
 )
 
 type Server struct {
-    cfg *config.Config
-    db  *gorm.DB
-    r   *gin.Engine
+    cfg        *config.Config
+    db         *gorm.DB
+    r          *gin.Engine
+    httpServer *http.Server
+    tlsStopCh  chan struct{}
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
@@ -105,12 +109,50 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 }
 
 func (s *Server) Start() error {
-    return s.r.Run(s.cfg.RESTListen)
+    s.httpServer = &http.Server{
+        Addr:    s.cfg.RESTListen,
+        Handler: s.r,
+    }
+
+    if s.cfg.IsTLSEnabled() {
+        // Create certificate reloader
+        certReloader, err := newCertReloader(s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
+        if err != nil {
+            return fmt.Errorf("failed to load TLS certificate: %w", err)
+        }
+
+        // Configure TLS
+        s.httpServer.TLSConfig = &tls.Config{
+            GetCertificate: certReloader.getCertificate,
+            MinVersion:     tls.VersionTLS12,
+        }
+
+        // Start certificate reloader if interval is configured
+        if s.cfg.TLSReloadSec > 0 {
+            s.tlsStopCh = make(chan struct{})
+            go certReloader.startReloading(time.Duration(s.cfg.TLSReloadSec)*time.Second, s.tlsStopCh)
+            log.Printf("Starting REST API with HTTPS on %s (cert reload every %d seconds)", s.cfg.RESTListen, s.cfg.TLSReloadSec)
+        } else {
+            log.Printf("Starting REST API with HTTPS on %s (cert reload disabled)", s.cfg.RESTListen)
+        }
+
+        return s.httpServer.ListenAndServeTLS("", "")
+    }
+
+    log.Printf("Starting REST API with HTTP on %s", s.cfg.RESTListen)
+    return s.httpServer.ListenAndServe()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-    // gin has no built-in graceful shutdown in Run(); typically use http.Server.
-    // For simplicity, we ignore here.
+    // Stop TLS certificate reloader if running
+    if s.tlsStopCh != nil {
+        close(s.tlsStopCh)
+    }
+
+    // Shutdown HTTP server gracefully
+    if s.httpServer != nil {
+        return s.httpServer.Shutdown(ctx)
+    }
     return nil
 }
 
