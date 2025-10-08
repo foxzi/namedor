@@ -42,6 +42,11 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
     }))
     r.Use(gin.Recovery())
 
+    // Apply IP ACL if configured
+    if cfg.HasIPACL() {
+        r.Use(ipACLMiddleware(cfg.AllowedCIDRs))
+    }
+
     s := &Server{cfg: cfg, db: db, r: r}
 
     // Public endpoints (no auth)

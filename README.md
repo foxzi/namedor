@@ -4,6 +4,8 @@ Overview
 - UDP/TCP DNS on :53
 - Zones and records in DB (GORM: Postgres/MySQL/SQLite)
 - REST API for zone management (+ JSON/BIND export, JSON import)
+- HTTPS support with automatic certificate reloading
+- IP-based access control (CIDR whitelist)
 - Geo-aware responses (subnet/country/continent), ECS support
 - Optional forwarder for cache-miss
 - Simple in-memory TTL cache
@@ -334,6 +336,51 @@ Config Reference
   - TTL: 3600
 - `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
 
+Security Features
+
+### HTTPS Support
+Enable HTTPS for REST API and Web Admin interface:
+
+```yaml
+rest_listen: ":8443"
+tls_cert_file: "/etc/ssl/certs/server.crt"
+tls_key_file: "/etc/ssl/private/server.key"
+tls_reload_sec: 3600  # Reload certificate every hour (default: 3600)
+```
+
+Features:
+- **Automatic Certificate Reloading**: Certificates are periodically reloaded from disk without service restart
+- **Hot Reload**: Perfect for Let's Encrypt and other auto-renewed certificates
+- **TLS 1.2+**: Minimum TLS version enforced for security
+- **Backward Compatible**: If TLS not configured, server runs in HTTP mode
+
+Example with Let's Encrypt:
+```yaml
+rest_listen: ":443"
+tls_cert_file: "/etc/letsencrypt/live/dns.example.com/fullchain.pem"
+tls_key_file: "/etc/letsencrypt/live/dns.example.com/privkey.pem"
+tls_reload_sec: 3600
+```
+
+### IP Access Control
+Restrict REST API access to specific IP ranges using CIDR notation:
+
+```yaml
+allowed_cidrs:
+  - "127.0.0.0/8"      # Localhost
+  - "10.0.0.0/8"       # Private network
+  - "192.168.1.0/24"   # Local subnet
+  - "2001:db8::/32"    # IPv6 network
+```
+
+Features:
+- **IPv4 and IPv6**: Full support for both IP versions
+- **Multiple Networks**: Specify multiple CIDR blocks
+- **Secure by Default**: Empty list allows all (backward compatible)
+- **Automatic Validation**: Invalid CIDRs are rejected at startup
+
+If `allowed_cidrs` is not specified or empty, all IPs are allowed (default behavior).
+
 ---
 
 # Русская версия / Russian Version
@@ -344,6 +391,8 @@ SmaillGeoDNS — Легковесный DNS-сервер с REST API + GeoDNS
 - UDP/TCP DNS на порту :53
 - Зоны и записи в БД (GORM: Postgres/MySQL/SQLite)
 - REST API для управления зонами (+ JSON/BIND экспорт, JSON импорт)
+- Поддержка HTTPS с автоматической перезагрузкой сертификатов
+- Контроль доступа по IP (whitelist на основе CIDR)
 - Geo-aware ответы (подсеть/страна/континент), поддержка ECS
 - Опциональный форвардер при отсутствии записи в кеше
 - Простой in-memory TTL кеш
@@ -674,6 +723,51 @@ VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s 
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
 - `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
+
+## Функции безопасности
+
+### Поддержка HTTPS
+Включение HTTPS для REST API и веб-админки:
+
+```yaml
+rest_listen: ":8443"
+tls_cert_file: "/etc/ssl/certs/server.crt"
+tls_key_file: "/etc/ssl/private/server.key"
+tls_reload_sec: 3600  # Перезагрузка сертификата каждый час (по умолчанию: 3600)
+```
+
+Возможности:
+- **Автоматическая перезагрузка сертификатов**: Сертификаты периодически перечитываются с диска без перезапуска сервиса
+- **Горячая перезагрузка**: Идеально для Let's Encrypt и других автообновляемых сертификатов
+- **TLS 1.2+**: Минимальная версия TLS для безопасности
+- **Обратная совместимость**: Если TLS не настроен, сервер работает в режиме HTTP
+
+Пример с Let's Encrypt:
+```yaml
+rest_listen: ":443"
+tls_cert_file: "/etc/letsencrypt/live/dns.example.com/fullchain.pem"
+tls_key_file: "/etc/letsencrypt/live/dns.example.com/privkey.pem"
+tls_reload_sec: 3600
+```
+
+### Контроль доступа по IP
+Ограничение доступа к REST API по определённым IP-диапазонам в нотации CIDR:
+
+```yaml
+allowed_cidrs:
+  - "127.0.0.0/8"      # Localhost
+  - "10.0.0.0/8"       # Приватная сеть
+  - "192.168.1.0/24"   # Локальная подсеть
+  - "2001:db8::/32"    # IPv6 сеть
+```
+
+Возможности:
+- **IPv4 и IPv6**: Полная поддержка обеих версий IP
+- **Множественные сети**: Можно указать несколько CIDR блоков
+- **Безопасно по умолчанию**: Пустой список разрешает всем (обратная совместимость)
+- **Автоматическая валидация**: Неправильные CIDR отклоняются при запуске
+
+Если `allowed_cidrs` не указан или пуст, доступ разрешён всем IP (поведение по умолчанию).
 
 ## License
 

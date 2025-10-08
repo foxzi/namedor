@@ -57,6 +57,7 @@ type Config struct {
     TLSCertFile  string     `yaml:"tls_cert_file"`  // Path to TLS certificate file for HTTPS
     TLSKeyFile   string     `yaml:"tls_key_file"`   // Path to TLS private key file for HTTPS
     TLSReloadSec int        `yaml:"tls_reload_sec"` // Certificate reload interval in seconds (0 = no reload)
+    AllowedCIDRs []string   `yaml:"allowed_cidrs"`  // List of allowed CIDR blocks for REST API access (empty = allow all)
     AutoSOAOnMissing bool   `yaml:"auto_soa_on_missing"`
     DefaultTTL   uint32     `yaml:"default_ttl"`
 
@@ -212,12 +213,24 @@ func (c *Config) Validate() error {
         }
     }
 
+    // Validate allowed CIDRs
+    for i, cidr := range c.AllowedCIDRs {
+        if _, _, err := net.ParseCIDR(cidr); err != nil {
+            return fmt.Errorf("allowed_cidrs[%d]: invalid CIDR %q: %w", i, cidr, err)
+        }
+    }
+
     return nil
 }
 
 // IsTLSEnabled returns true if TLS is configured for REST API
 func (c *Config) IsTLSEnabled() bool {
     return c.TLSCertFile != "" && c.TLSKeyFile != ""
+}
+
+// HasIPACL returns true if IP ACL is configured
+func (c *Config) HasIPACL() bool {
+    return len(c.AllowedCIDRs) > 0
 }
 
 // validateAddr validates host:port address format
