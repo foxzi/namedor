@@ -41,30 +41,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
 
-      - name: Build binary
-        run: |
-          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
-            -ldflags "-X main.Version=${{ steps.version.outputs.version }} -s -w" \
-            -o namedot \
-            ./cmd/namedot
-
       - name: Install nFPM
         run: |
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt-get update
           sudo apt-get install -y nfpm
 
-      - name: Build DEB package
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+      - name: Build packages
         run: |
-          nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
-
-      - name: Build RPM package
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
+          make package VERSION=${{ steps.version.outputs.version }}
 
       - name: List packages
         run: |
