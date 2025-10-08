@@ -48,4 +48,4 @@ cat /usr/share/doc/namedot/DOCKER.md
 ## Online Documentation
 
 Latest documentation is also available at:
-https://github.com/piligrim/namedot
+https://github.com/foxzi/namedot
