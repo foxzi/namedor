@@ -300,12 +300,29 @@ sudo apt-get update
 sudo apt-get install -y nfpm
 ```
 
-2. Build packages:
+2. Build packages using Makefile (recommended):
 ```bash
-# Set version (or use git describe)
+# Build both DEB and RPM packages
+# Version is automatically detected from git tags
+make package
+
+# Or build specific package type
+make package-deb
+make package-rpm
+
+# Override version if needed
+make package VERSION=0.2.0
+```
+
+The Makefile automatically:
+- Builds the binary with correct version and flags
+- Creates DEB and RPM packages
+- Shows package sizes and locations
+
+3. Manual build (alternative):
+```bash
+# Set version
 export VERSION="0.1.0"
-# Or automatically from git:
-# export VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 
 # Build binary
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
@@ -313,19 +330,9 @@ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
   -o namedot \
   ./cmd/namedot
 
-# Build DEB package
-nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
-
-# Build RPM package
-nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
-
-# Check results
-ls -lh *.deb *.rpm
-```
-
-Quick one-liner:
-```bash
-VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s -w" -o namedot ./cmd/namedot && nfpm pkg --packager deb --config packaging/nfpm.yaml --target . && nfpm pkg --packager rpm --config packaging/nfpm.yaml --target . && ls -lh *.deb *.rpm
+# Build packages
+VERSION=$VERSION nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
+VERSION=$VERSION nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
 ```
 
 Config Reference
@@ -688,12 +695,29 @@ sudo apt-get update
 sudo apt-get install -y nfpm
 ```
 
-2. Собрать пакеты:
+2. Собрать пакеты через Makefile (рекомендуется):
 ```bash
-# Установить версию (или использовать git describe)
+# Собрать оба пакета DEB и RPM
+# Версия автоматически определяется из git tags
+make package
+
+# Или собрать конкретный тип пакета
+make package-deb
+make package-rpm
+
+# Переопределить версию при необходимости
+make package VERSION=0.2.0
+```
+
+Makefile автоматически:
+- Собирает бинарник с правильной версией и флагами
+- Создаёт DEB и RPM пакеты
+- Показывает размеры пакетов и их расположение
+
+3. Ручная сборка (альтернатива):
+```bash
+# Установить версию
 export VERSION="0.1.0"
-# Или автоматически из git:
-# export VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 
 # Собрать бинарник
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
@@ -701,19 +725,9 @@ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
   -o namedot \
   ./cmd/namedot
 
-# Собрать DEB пакет
-nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
-
-# Собрать RPM пакет
-nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
-
-# Проверить результат
-ls -lh *.deb *.rpm
-```
-
-Быстрая сборка одной командой:
-```bash
-VERSION="0.1.0" && CGO_ENABLED=1 go build -ldflags "-X main.Version=$VERSION -s -w" -o namedot ./cmd/namedot && nfpm pkg --packager deb --config packaging/nfpm.yaml --target . && nfpm pkg --packager rpm --config packaging/nfpm.yaml --target . && ls -lh *.deb *.rpm
+# Собрать пакеты
+VERSION=$VERSION nfpm pkg --packager deb --config packaging/nfpm.yaml --target .
+VERSION=$VERSION nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
 ```
 
 ## Справка по конфигурации
