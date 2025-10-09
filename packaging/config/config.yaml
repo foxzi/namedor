@@ -13,6 +13,17 @@ rest_listen: "127.0.0.1:8080"
 # api_token: "CHANGE_ME_PLEASE"  # Deprecated: use api_token_hash instead
 api_token_hash: ""  # Generate with: namedot --gen-token yourToken
 
+# TLS configuration for HTTPS (optional)
+# tls_cert_file: "/etc/namedot/cert.pem"  # Path to TLS certificate
+# tls_key_file: "/etc/namedot/key.pem"    # Path to TLS private key
+# tls_reload_sec: 3600                     # Reload certificate every N seconds
+
+# IP-based access control for REST API (optional)
+# allowed_cidrs:                           # Restrict REST API to specific IP ranges (empty = allow all)
+#   - "127.0.0.0/8"                        # Localhost
+#   - "10.0.0.0/8"                         # Private network
+#   - "192.168.1.0/24"                     # Local subnet
+
 # Database configuration
 db:
   driver: "sqlite"

@@ -78,28 +78,75 @@ contents:
       mode: 0755
 
   # Documentation files
-  - src: ./README.md
+  - src: ./docs/README.md
     dst: /usr/share/doc/namedot/README.md
     file_info:
       mode: 0644
 
-  - src: ./REPLICATION.md
+  - src: ./docs/REPLICATION.md
     dst: /usr/share/doc/namedot/REPLICATION.md
     file_info:
       mode: 0644
 
-  - src: ./DOCKER.md
+  - src: ./docs/DOCKER.md
     dst: /usr/share/doc/namedot/DOCKER.md
     file_info:
       mode: 0644
 
-  - src: ./WEBADMIN.md
+  - src: ./docs/WEBADMIN.md
     dst: /usr/share/doc/namedot/WEBADMIN.md
+    file_info:
+      mode: 0644
+
+  - src: ./docs/PACKAGE_DOCS.md
+    dst: /usr/share/doc/namedot/PACKAGE_DOCS.md
     file_info:
       mode: 0644
 
   - src: ./LICENSE
     dst: /usr/share/doc/namedot/LICENSE
+    file_info:
+      mode: 0644
+
+  # Configuration examples directory
+  - dst: /usr/share/doc/namedot/examples
+    type: dir
+    file_info:
+      mode: 0755
+
+  # Configuration examples
+  - src: ./docs/examples/README.md
+    dst: /usr/share/doc/namedot/examples/README.md
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.yaml
+    dst: /usr/share/doc/namedot/examples/config.yaml
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.master.yaml
+    dst: /usr/share/doc/namedot/examples/config.master.yaml
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.slave.yaml
+    dst: /usr/share/doc/namedot/examples/config.slave.yaml
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.mysql.yaml
+    dst: /usr/share/doc/namedot/examples/config.mysql.yaml
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.postgres.yaml
+    dst: /usr/share/doc/namedot/examples/config.postgres.yaml
+    file_info:
+      mode: 0644
+
+  - src: ./docs/examples/config.docker.yaml
+    dst: /usr/share/doc/namedot/examples/config.docker.yaml
     file_info:
       mode: 0644
 
