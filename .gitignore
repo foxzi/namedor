@@ -36,3 +36,4 @@ test_*.db
 
 # go
 .gopath
+CHANGELOG.md
