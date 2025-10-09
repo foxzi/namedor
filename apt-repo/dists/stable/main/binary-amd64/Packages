@@ -1,0 +1,25 @@
+Package: namedot
+Version: 0.2.1
+Architecture: amd64
+Maintainer: Sergei Vorontsov <piligrim@rootnix.net>
+Installed-Size: 20674
+Recommends: systemd, sqlite3
+Filename: pool/main/namedot_0.2.1_amd64.deb
+Size: 7944412
+MD5sum: bdb1640f35070266411aab7be1285e31
+SHA1: ce853d2aadd175f625de19b01b07b29e4c130a74
+SHA256: 4afb5a49181644eba45c4ada5ce9ed8616186643e0637d30a0618317b20973e5
+Section: net
+Priority: optional
+Homepage: https://github.com/piligrim/namedot
+Description: Lightweight DNS server with REST API and GeoDNS support
+ .
+ Features:
+ - UDP/TCP DNS server
+ - REST API for zone management
+ - GeoDNS with country/continent/subnet support
+ - SQLite/PostgreSQL/MySQL backend
+ - Master-Slave replication
+ - Web admin panel
+License: MIT
+
