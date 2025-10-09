@@ -3,6 +3,7 @@ package web
 import (
     "fmt"
     "net/http"
+    "net/url"
     "strconv"
     "strings"
 
@@ -38,11 +39,70 @@ func (s *Server) listRecords(c *gin.Context) {
         return
     }
 
+	// Get pagination, search, and filter parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	perPage := 30
+	offset := (page - 1) * perPage
+
+	search := strings.TrimSpace(c.Query("search"))
+	filterType := strings.ToUpper(strings.TrimSpace(c.Query("type")))
+
+	// Build query
+	query := s.db.Model(&db.RRSet{}).Where("zone_id = ?", zoneID)
+	if search != "" {
+		query = query.Where("name LIKE ? OR type LIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+	if filterType != "" && filterType != "ALL" {
+		query = query.Where("type = ?", filterType)
+	}
+
+	// Get total count
+	var total int64
+	query.Count(&total)
+
+	// Get rrsets for current page
 	var rrsets []db.RRSet
-    if err := s.db.Where("zone_id = ?", zoneID).Preload("Records").Find(&rrsets).Error; err != nil {
-        c.String(http.StatusInternalServerError, s.tr(c, "Error loading records"))
-        return
-    }
+	if err := query.Offset(offset).Limit(perPage).Preload("Records").Find(&rrsets).Error; err != nil {
+		c.String(http.StatusInternalServerError, s.tr(c, "Error loading records"))
+		return
+	}
+
+	// Calculate pagination
+	totalPages := int((total + int64(perPage) - 1) / int64(perPage))
+
+	// Build filter and search form
+	recordTypes := []string{"ALL", "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV"}
+	filterForm := fmt.Sprintf(`
+	<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+		<form hx-get="/admin/zones/%d/records" hx-target="#zones-list" hx-swap="innerHTML" style="display: flex; gap: 0.5rem; flex: 1;">
+			<input type="text" name="search" placeholder="`+s.tr(c, "Search records...")+`" value="%s"
+				style="flex: 1; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+			<select name="type" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">`,
+		zoneID, search)
+
+	for _, rt := range recordTypes {
+		selected := ""
+		if rt == filterType || (filterType == "" && rt == "ALL") {
+			selected = " selected"
+		}
+		label := rt
+		if rt == "ALL" {
+			label = s.tr(c, "All Types")
+		}
+		filterForm += fmt.Sprintf(`<option value="%s"%s>%s</option>`, rt, selected, label)
+	}
+
+	filterForm += `</select>
+			<button type="submit" class="btn">` + s.tr(c, "Filter") + `</button>
+			<button type="button" class="btn" style="background: #718096;"
+				hx-get="/admin/zones/` + fmt.Sprintf("%d", zoneID) + `/records" hx-target="#zones-list" hx-swap="innerHTML">
+				` + s.tr(c, "Clear") + `
+			</button>
+		</form>
+	</div>`
 
 	html := fmt.Sprintf(`
 	<div style="margin-bottom: 1rem;">
@@ -61,10 +121,15 @@ func (s *Server) listRecords(c *gin.Context) {
 		</button>
 	</div>
 	<div id="template-selector-%d"></div>
-	<div id="records-list">`, s.tr(c, "← Back to Zones"), s.trf(c, "Records for %s", zone.Name), zoneID, s.tr(c, "+ Add Record"), zoneID, s.tr(c, "📋 Apply Template"), zoneID)
+	%s
+	<div id="records-list">`, s.tr(c, "← Back to Zones"), s.trf(c, "Records for %s", zone.Name), zoneID, s.tr(c, "+ Add Record"), zoneID, s.tr(c, "📋 Apply Template"), zoneID, filterForm)
 
 	if len(rrsets) == 0 {
-		html += `<div class="empty-state">` + s.tr(c, "No records found. Add your first record!") + `</div>`
+		if search != "" || filterType != "" {
+			html += `<div class="empty-state">` + s.tr(c, "No records found matching your filters") + `</div>`
+		} else {
+			html += `<div class="empty-state">` + s.tr(c, "No records found. Add your first record!") + `</div>`
+		}
 	} else {
 		html += `<table><thead><tr><th>` + s.tr(c, "Name") + `</th><th>` + s.tr(c, "Type") + `</th><th>` + s.tr(c, "TTL") + `</th><th>` + s.tr(c, "GeoIP") + `</th><th>` + s.tr(c, "Data") + `</th><th>` + s.tr(c, "Actions") + `</th></tr></thead><tbody>`
 
@@ -108,6 +173,38 @@ func (s *Server) listRecords(c *gin.Context) {
 		}
 
 		html += `</tbody></table>`
+	}
+
+	// Add pagination if needed
+	if totalPages > 1 {
+		html += `<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">`
+
+		// Build pagination URL params
+		params := fmt.Sprintf("search=%s&type=%s", url.QueryEscape(search), url.QueryEscape(filterType))
+
+		// Previous button
+		if page > 1 {
+			html += fmt.Sprintf(`<button class="btn btn-sm" hx-get="/admin/zones/%d/records?page=%d&%s" hx-target="#zones-list" hx-swap="innerHTML">« `+s.tr(c, "Prev")+`</button>`, zoneID, page-1, params)
+		}
+
+		// Page numbers
+		for i := 1; i <= totalPages; i++ {
+			if i == page {
+				html += fmt.Sprintf(`<button class="btn btn-sm" style="background: #667eea; color: white;">%d</button>`, i)
+			} else if i == 1 || i == totalPages || (i >= page-2 && i <= page+2) {
+				html += fmt.Sprintf(`<button class="btn btn-sm" hx-get="/admin/zones/%d/records?page=%d&%s" hx-target="#zones-list" hx-swap="innerHTML">%d</button>`, zoneID, i, params, i)
+			} else if i == page-3 || i == page+3 {
+				html += `<span style="padding: 0.25rem 0.5rem;">...</span>`
+			}
+		}
+
+		// Next button
+		if page < totalPages {
+			html += fmt.Sprintf(`<button class="btn btn-sm" hx-get="/admin/zones/%d/records?page=%d&%s" hx-target="#zones-list" hx-swap="innerHTML">`+s.tr(c, "Next")+` »</button>`, zoneID, page+1, params)
+		}
+
+		html += `</div>`
+		html += fmt.Sprintf(`<div style="text-align: center; margin-top: 0.5rem; color: #718096; font-size: 0.875rem;">`+s.tr(c, "Page %d of %d")+` (%d `+s.tr(c, "total")+`)</div>`, page, totalPages, total)
 	}
 
 	html += `</div>`
