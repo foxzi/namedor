@@ -1,55 +1,46 @@
 # Configuration Examples
 
-This directory contains example configuration files for different deployment scenarios.
+> **⚠️ DEPRECATED:** This directory is kept for backward compatibility only.
+>
+> **All examples have been moved to [`docs/examples/`](../docs/examples/)**
 
-## Files
+## New Location
 
-### config.yaml
-Basic configuration example for a standalone DNS server.
+Configuration examples and documentation are now organized in the `docs/` directory:
 
-### config.master.yaml
-Configuration for a **master server** in a replication setup.
+- 📁 **[docs/examples/](../docs/examples/)** - All configuration examples
+- 📖 **[docs/examples/README.md](../docs/examples/README.md)** - Detailed usage guide
+- 📚 **[docs/](../docs/)** - Complete documentation
 
-Key features:
-- `replication.mode: "master"` - enables master mode
-- Admin panel and DNS updates are enabled
-- Serves replication data via `/sync/export` endpoint
+## Available Examples
 
-### config.slave.yaml
-Configuration for a **slave server** in a replication setup.
+The following examples are available in `docs/examples/`:
 
-Key features:
-- `replication.mode: "slave"` - enables slave mode
-- `replication.master_url` - URL of the master server
-- `replication.sync_interval_sec` - synchronization interval
-- **Auto-disabled** features in slave mode:
-  - Admin panel (`admin.enabled` → `false`)
-  - DNS updates (`update.enabled` → `false`)
+- `config.yaml` - Basic standalone configuration
+- `config.master.yaml` - Master server for replication
+- `config.slave.yaml` - Slave server for replication
+- `config.mysql.yaml` - MySQL backend configuration
+- `config.postgres.yaml` - PostgreSQL backend configuration
+- `config.docker.yaml` - Docker deployment
 
-## Usage
+## Migration Guide
 
-### Deploy Master Server
+Update your commands to use the new location:
 
 ```bash
+# Old (deprecated)
 cp examples/config.master.yaml config.yaml
-# Edit api_token with a secure token
-./namedot
+
+# New
+cp docs/examples/config.master.yaml config.yaml
 ```
 
-### Deploy Slave Server
+The configuration file format is identical - only the location has changed.
 
-```bash
-cp examples/config.slave.yaml config.yaml
-# Edit:
-#   - replication.master_url (e.g., "http://192.168.1.100:8080")
-#   - replication.api_token (same as master)
-#   - replication.sync_interval_sec (optional, default: 60)
-./namedot
-```
+## Documentation
 
-## Notes
-
-- Slave servers automatically synchronize data from the master
-- Admin panel and updates are automatically disabled on slave servers for security
-- Both master and slave use the same binary
-- See [REPLICATION.md](../REPLICATION.md) for detailed documentation
+For detailed setup instructions, see:
+- [Replication Guide](../docs/REPLICATION.md)
+- [Web Admin Guide](../docs/WEBADMIN.md)
+- [Docker Guide](../docs/DOCKER.md)
+- [Main README](../docs/README.md)
