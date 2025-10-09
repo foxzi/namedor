@@ -242,7 +242,7 @@ func (s *Server) editTemplateForm(c *gin.Context) {
     <div style="background: white; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>%s</h3>
-            <button class="btn btn-sm" hx-get="/admin/templates/%d/records/new" hx-target="#template-records" hx-swap="beforebegin">
+            <button type="button" class="btn btn-sm" hx-get="/admin/templates/%d/records/new" hx-target="#template-records" hx-swap="afterbegin">
                 %s
             </button>
         </div>
