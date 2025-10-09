@@ -2,6 +2,12 @@ GO ?= go
 BIN := namedot
 CFG ?= config.yaml
 
+# Version information
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(COMMIT) -X main.BuildDate=$(DATE)"
+
 .PHONY: all build run test test-all test-unit test-int test-geo mmdb-clean clean package package-deb package-rpm
 
 all: build
@@ -9,7 +15,7 @@ all: build
 build: $(BIN)
 
 $(BIN):
-	$(GO) build -o $(BIN) ./cmd/$(BIN)
+	$(GO) build $(LDFLAGS) -o $(BIN) ./cmd/$(BIN)
 
 run: build
 	SGDNS_CONFIG=$(CFG) ./$(BIN)
@@ -36,12 +42,10 @@ clean:
 	rm -f $(BIN) *.db *.test *.out namedot_dev.db *.deb *.rpm
 
 # Package building
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-
 build-for-package:
 	@echo "Building namedot binary for packaging (version: $(VERSION))..."
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 $(GO) build -v \
-		-ldflags "-X main.Version=$(VERSION) -s -w" \
+		-ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(COMMIT) -X main.BuildDate=$(DATE) -s -w" \
 		-o $(BIN) \
 		./cmd/$(BIN)
 	@echo "Binary built successfully"

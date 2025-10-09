@@ -7,6 +7,7 @@ import (
     "log"
     "os"
     "os/signal"
+    "runtime"
     "strings"
     "syscall"
     "time"
@@ -20,21 +21,22 @@ import (
     restsrv "namedot/internal/server/rest"
 )
 
-// Version is set via -ldflags "-X main.Version=<version>" during build.
-var Version = "dev"
+// Build information set via -ldflags during build.
+var (
+    Version   = "dev"
+    GitCommit = "unknown"
+    BuildDate = "unknown"
+)
 
 func main() {
     // Normalize GNU-style flags ("--flag") to Go's default ("-flag")
-    // to support both -c/--config, -t/--test, -p/--password without extra deps.
     if len(os.Args) > 1 {
         norm := make([]string, 0, len(os.Args))
         norm = append(norm, os.Args[0])
         for i := 1; i < len(os.Args); i++ {
             a := os.Args[i]
-            if a == "--" { // end of flags
-                norm = append(norm, a)
-                // append the rest as-is
-                norm = append(norm, os.Args[i+1:]...)
+            if a == "--" {
+                norm = append(norm, os.Args[i:]...)
                 break
             }
             if strings.HasPrefix(a, "--") {
@@ -53,21 +55,45 @@ func main() {
         showVer  bool
     )
 
-    // Support both short and long variants by binding to the same var
-    flag.StringVar(&cfgPath, "c", "", "path to config file (yaml)")
-    flag.StringVar(&cfgPath, "config", "", "path to config file (yaml)")
-    flag.BoolVar(&testOnly, "t", false, "validate config and exit")
-    flag.BoolVar(&testOnly, "test", false, "validate config and exit")
-    flag.StringVar(&password, "p", "", "generate bcrypt hash for admin password and exit")
-    flag.StringVar(&password, "password", "", "generate bcrypt hash for admin password and exit")
-    flag.StringVar(&token, "g", "", "generate bcrypt hash for api token and exit")
-    flag.StringVar(&token, "gen-token", "", "generate bcrypt hash for api token and exit")
-    flag.BoolVar(&showVer, "v", false, "print version and exit")
-    flag.BoolVar(&showVer, "version", false, "print version and exit")
+    flag.Usage = func() {
+        fmt.Fprintf(os.Stderr, "namedot - GeoDNS server with master-slave replication\n\n")
+        fmt.Fprintf(os.Stderr, "Usage: namedot [options]\n\n")
+        fmt.Fprintf(os.Stderr, "Options:\n")
+        fmt.Fprintf(os.Stderr, "  -c, -config <file>        Path to config file (default: config.yaml)\n")
+        fmt.Fprintf(os.Stderr, "  -t, -test                 Validate config and exit\n")
+        fmt.Fprintf(os.Stderr, "  -p, -password <password>  Generate bcrypt hash for admin password and exit\n")
+        fmt.Fprintf(os.Stderr, "  -g, -gen-token <token>    Generate bcrypt hash for API token and exit\n")
+        fmt.Fprintf(os.Stderr, "  -v, -version              Print version and exit\n")
+        fmt.Fprintf(os.Stderr, "  -h, -help                 Show this help message\n")
+        fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
+        fmt.Fprintf(os.Stderr, "  SGDNS_CONFIG              Config file path (overridden by -c flag)\n")
+        fmt.Fprintf(os.Stderr, "\nExamples:\n")
+        fmt.Fprintf(os.Stderr, "  namedot                   Start server with config.yaml\n")
+        fmt.Fprintf(os.Stderr, "  namedot -c prod.yaml      Start with custom config\n")
+        fmt.Fprintf(os.Stderr, "  namedot -t                Validate config\n")
+        fmt.Fprintf(os.Stderr, "  namedot -p mypassword     Generate password hash\n")
+        fmt.Fprintf(os.Stderr, "  namedot -g mytoken        Generate API token hash\n")
+        fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/piligrim/namedot\n")
+    }
+
+    flag.StringVar(&cfgPath, "c", "", "")
+    flag.StringVar(&cfgPath, "config", "", "")
+    flag.BoolVar(&testOnly, "t", false, "")
+    flag.BoolVar(&testOnly, "test", false, "")
+    flag.StringVar(&password, "p", "", "")
+    flag.StringVar(&password, "password", "", "")
+    flag.StringVar(&token, "g", "", "")
+    flag.StringVar(&token, "gen-token", "", "")
+    flag.BoolVar(&showVer, "v", false, "")
+    flag.BoolVar(&showVer, "version", false, "")
     flag.Parse()
 
     if showVer {
-        fmt.Println(Version)
+        fmt.Printf("namedot %s\n", Version)
+        fmt.Printf("  Commit:    %s\n", GitCommit)
+        fmt.Printf("  Built:     %s\n", BuildDate)
+        fmt.Printf("  Go:        %s\n", runtime.Version())
+        fmt.Printf("  Platform:  %s/%s\n", runtime.GOOS, runtime.GOARCH)
         return
     }
 
