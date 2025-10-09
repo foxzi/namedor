@@ -201,6 +201,19 @@ func (s *Server) editTemplateForm(c *gin.Context) {
     }
 
     html := fmt.Sprintf(`
+    <!-- Help Banner -->
+    <div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem;">📋</div>
+            <div style="flex: 1;">
+                <h4 style="margin: 0 0 0.25rem 0; color: white;">%s</h4>
+                <p style="margin: 0; opacity: 0.9; font-size: 0.875rem;">
+                    %s <code style="background: rgba(255,255,255,0.2); padding: 0.125rem 0.375rem; border-radius: 3px;">{domain}</code> %s
+                </p>
+            </div>
+        </div>
+    </div>
+
     <div style="background: #f7fafc; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
         <h3>%s</h3>
         <form hx-put="/admin/templates/%d" hx-target="#templates-content" hx-swap="innerHTML" style="margin-top: 1rem;">
@@ -234,6 +247,9 @@ func (s *Server) editTemplateForm(c *gin.Context) {
             </button>
         </div>
         <div id="template-records">`,
+        s.tr(c, "Template Placeholders Guide"),
+        s.tr(c, "Use"),
+        s.tr(c, "in Name and Data fields - it will be replaced with the actual domain when applying the template"),
         s.trf(c, "Edit Template: %s", template.Name), id,
         s.tr(c, "Template Name"), template.Name,
         s.tr(c, "Description"), template.Description,
@@ -346,93 +362,146 @@ func (s *Server) newTemplateRecordForm(c *gin.Context) {
 	templateID := c.Param("id")
 
 html := fmt.Sprintf(`
-    <div style="background: #edf2f7; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-        <h4>%s</h4>
-        <p style="color: #718096; font-size: 0.875rem; margin-bottom: 0.5rem;">
-            %s
-        </p>
-        <form hx-post="/admin/templates/%s/records" hx-target="#templates-content" hx-swap="innerHTML"
-            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+    <div style="background: #edf2f7; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+            <!-- Left side: Form -->
+            <div style="flex: 2;">
+                <h4 style="margin-bottom: 1rem;">%s</h4>
+                <form hx-post="/admin/templates/%s/records" hx-target="#templates-content" hx-swap="innerHTML">
 
-            <div>
-                <label>%s</label>
-                <input type="text" name="name" placeholder="{domain} or mail.{domain}" required
-                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                    <!-- Basic DNS Record Fields -->
+                    <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <h5 style="margin-bottom: 0.75rem; color: #2d3748;">%s</h5>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500;">%s</label>
+                                <input type="text" name="name" placeholder="{domain}" required
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500;">Type</label>
+                                <select name="type" required
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                                    <option value="A">A</option>
+                                    <option value="AAAA">AAAA</option>
+                                    <option value="CNAME">CNAME</option>
+                                    <option value="MX">MX</option>
+                                    <option value="TXT">TXT</option>
+                                    <option value="NS">NS</option>
+                                    <option value="SOA">SOA</option>
+                                    <option value="SRV">SRV</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500;">TTL</label>
+                                <input type="number" name="ttl" value="300" required
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500;">%s</label>
+                            <input type="text" name="data" placeholder="192.0.2.1" required
+                                style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace;">
+                        </div>
+                    </div>
+
+                    <!-- GeoIP Fields -->
+                    <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        <h5 style="margin-bottom: 0.75rem; color: #2d3748;">%s</h5>
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">%s</label>
+                                <input type="text" name="country" maxlength="2" placeholder="US"
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; text-transform: uppercase;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">%s</label>
+                                <input type="text" name="continent" maxlength="2" placeholder="EU"
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; text-transform: uppercase;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">ASN</label>
+                                <input type="number" name="asn" placeholder="65001"
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Subnet</label>
+                                <input type="text" name="subnet" placeholder="10.0.0.0/8"
+                                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button type="submit" class="btn">%s</button>
+                        <button type="button" class="btn" style="background: #718096;"
+                            hx-get="/admin/templates/%s/edit" hx-target="#templates-content" hx-swap="innerHTML">
+                            %s
+                        </button>
+                    </div>
+                </form>
             </div>
 
-			<div>
-				<label>Type</label>
-				<select name="type" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-					<option value="A">A</option>
-					<option value="AAAA">AAAA</option>
-					<option value="CNAME">CNAME</option>
-					<option value="MX">MX</option>
-					<option value="TXT">TXT</option>
-					<option value="NS">NS</option>
-				</select>
-			</div>
+            <!-- Right side: Help -->
+            <div style="flex: 1; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 1rem;">
+                <h5 style="margin: 0 0 0.75rem 0; color: #856404; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.25rem;">💡</span> %s
+                </h5>
 
-			<div>
-				<label>TTL</label>
-				<input type="number" name="ttl" value="300" required
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
+                <div style="font-size: 0.875rem; color: #856404; line-height: 1.5;">
+                    <p style="margin: 0 0 0.75rem 0;"><strong>%s:</strong></p>
+                    <ul style="margin: 0 0 1rem 1.25rem; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;">
+                            <code style="background: #fff; padding: 0.125rem 0.25rem; border-radius: 2px;">{domain}</code>
+                            → example.com
+                        </li>
+                    </ul>
 
-            <div>
-                <label>%s</label>
-                <input type="text" name="data" placeholder="10 mail.{domain}" required
-                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
+                    <p style="margin: 0 0 0.5rem 0;"><strong>%s:</strong></p>
+                    <div style="background: white; padding: 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>Name: <strong>mail.{domain}</strong></div>
+                        <div>Type: A</div>
+                        <div>Data: 192.0.2.10</div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #ccc;">
+                            ↓ %s example.com
+                        </div>
+                        <div style="color: #16a34a;">mail.example.com → 192.0.2.10</div>
+                    </div>
+
+                    <p style="margin: 0 0 0.5rem 0;"><strong>MX %s:</strong></p>
+                    <div style="background: white; padding: 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">
+                        <div>Name: <strong>{domain}</strong></div>
+                        <div>Type: MX</div>
+                        <div>Data: <strong>10 mail.{domain}</strong></div>
+                    </div>
+                </div>
             </div>
-
-            <div style="grid-column: span 2;">
-                <strong>%s</strong>
-            </div>
-
-            <div>
-                <label>%s</label>
-                <input type="text" name="country" maxlength="2" placeholder="RU"
-                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-            </div>
-
-            <div>
-                <label>%s</label>
-                <input type="text" name="continent" maxlength="2" placeholder="EU"
-                    style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-            </div>
-
-			<div>
-				<label>ASN</label>
-				<input type="number" name="asn" placeholder="65001"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
-
-			<div>
-				<label>Subnet</label>
-				<input type="text" name="subnet" placeholder="10.0.0.0/8"
-					style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-			</div>
-
-            <div style="grid-column: span 2; display: flex; gap: 1rem;">
-                <button type="submit" class="btn">%s</button>
-                <button type="button" class="btn" style="background: #718096;"
-                    hx-get="/admin/templates/%s/edit" hx-target="#templates-content" hx-swap="innerHTML">
-                    %s
-                </button>
-            </div>
-        </form>
+        </div>
     </div>`,
     s.tr(c, "Add Template Record"),
-    s.tr(c, "Use placeholders: <code>{domain}</code> for zone name, <code>{subdomain}</code> for custom names"),
     templateID,
-    s.tr(c, "Name (supports placeholders)"),
-    s.tr(c, "Data (supports placeholders)"),
+    s.tr(c, "DNS Record"),
+    s.tr(c, "Name"),
+    s.tr(c, "Data"),
     s.tr(c, "GeoIP Targeting (optional)"),
     s.tr(c, "Country Code"),
     s.tr(c, "Continent Code"),
     s.tr(c, "Add Record"),
     templateID,
-    s.tr(c, "Cancel"))
+    s.tr(c, "Cancel"),
+    s.tr(c, "Help"),
+    s.tr(c, "Placeholders"),
+    s.tr(c, "Example"),
+    s.tr(c, "Applied to"),
+    s.tr(c, "record"))
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)

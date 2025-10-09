@@ -105,6 +105,15 @@ var translations = map[string]map[string]string{
         "Apply Template": "Apply Template",
         "Zone: %s": "Zone: %s",
         "This will create %d records:": "This will create %d records:",
+        "Template Placeholders Guide": "Template Placeholders Guide",
+        "Use": "Use",
+        "in Name and Data fields - it will be replaced with the actual domain when applying the template": "in Name and Data fields - it will be replaced with the actual domain when applying the template",
+        "DNS Record": "DNS Record",
+        "Help": "Help",
+        "Placeholders": "Placeholders",
+        "Example": "Example",
+        "Applied to": "Applied to",
+        "record": "record",
 
         // Record edit
         "Invalid record ID": "Invalid record ID",
@@ -220,6 +229,15 @@ var translations = map[string]map[string]string{
         "Apply Template": "Применить шаблон",
         "Zone: %s": "Зона: %s",
         "This will create %d records:": "Будет создано %d записей:",
+        "Template Placeholders Guide": "Руководство по плейсхолдерам шаблонов",
+        "Use": "Используйте",
+        "in Name and Data fields - it will be replaced with the actual domain when applying the template": "в полях Имя и Данные - будет заменён на реальный домен при применении шаблона",
+        "DNS Record": "DNS запись",
+        "Help": "Справка",
+        "Placeholders": "Плейсхолдеры",
+        "Example": "Пример",
+        "Applied to": "Применено к",
+        "record": "запись",
 
         // Record edit
         "Invalid record ID": "Некорректный ID записи",
