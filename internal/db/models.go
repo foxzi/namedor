@@ -24,7 +24,7 @@ type RRSet struct {
     CreatedAt time.Time      `json:"created_at"`
     UpdatedAt time.Time      `json:"updated_at"`
     DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-    Records   []RData        `json:"records"`
+    Records   []RData        `gorm:"foreignKey:RRSetID" json:"records"`
 }
 
 type RData struct {
