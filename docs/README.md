@@ -18,7 +18,7 @@ Installation
 #### Debian/Ubuntu (APT)
 ```bash
 # Add repository
-echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+echo "deb [trusted=yes] https://foxzi.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
 
 # Update and install
 sudo apt-get update
@@ -32,7 +32,7 @@ sudo systemctl start namedot
 #### RHEL/CentOS/Fedora (YUM/DNF)
 ```bash
 # Add repository
-sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+sudo curl -o /etc/yum.repos.d/namedot.repo https://foxzi.github.io/namedot/yum-repo/namedot/namedot.repo
 
 # Install
 sudo yum install namedot
@@ -412,7 +412,7 @@ SmaillGeoDNS — Легковесный DNS-сервер с REST API + GeoDNS
 #### Debian/Ubuntu (APT)
 ```bash
 # Добавить репозиторий
-echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+echo "deb [trusted=yes] https://foxzi.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
 
 # Обновить и установить
 sudo apt-get update
@@ -426,7 +426,7 @@ sudo systemctl start namedot
 #### RHEL/CentOS/Fedora (YUM/DNF)
 ```bash
 # Добавить репозиторий
-sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+sudo curl -o /etc/yum.repos.d/namedot.repo https://foxzi.github.io/namedot/yum-repo/namedot/namedot.repo
 
 # Установить
 sudo yum install namedot

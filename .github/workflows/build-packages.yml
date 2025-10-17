@@ -194,7 +194,7 @@ jobs:
                   <h2>Debian/Ubuntu (APT)</h2>
                   <pre>
           # Add repository
-          echo "deb [trusted=yes] https://piligrim.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
+          echo "deb [trusted=yes] https://foxzi.github.io/namedot/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/namedot.list
 
           # Update and install
           sudo apt-get update
@@ -206,7 +206,7 @@ jobs:
                   <h2>RHEL/CentOS/Fedora (YUM/DNF)</h2>
                   <pre>
           # Add repository
-          sudo curl -o /etc/yum.repos.d/namedot.repo https://piligrim.github.io/namedot/yum-repo/namedot/namedot.repo
+          sudo curl -o /etc/yum.repos.d/namedot.repo https://foxzi.github.io/namedot/yum-repo/namedot/namedot.repo
 
           # Install
           sudo yum install namedot
