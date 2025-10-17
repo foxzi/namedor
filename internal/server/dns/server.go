@@ -175,6 +175,11 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
             log.Printf("DNS QUERY forward q=%s type=%s to=%s%s rcode=%d id=%d", q.Name, dns.TypeToString[q.Qtype], s.cfg.Forwarder, geoStr, in.Rcode, r.Id)
             in.Id = r.Id
             _ = w.WriteMsg(in)
+            // Cache negative responses (NXDOMAIN, NODATA, etc.) to prevent repeated upstream queries
+            // Use a shorter TTL for negative caching (300 seconds = 5 minutes)
+            if in.Rcode != dns.RcodeSuccess {
+                s.cache.Set(key, in.Copy(), 5*time.Minute)
+            }
             return
         }
     }
@@ -182,6 +187,8 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
     log.Printf("DNS QUERY nxdomain q=%s type=%s from=%s%s id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), geoStr, r.Id)
     m.Rcode = dns.RcodeNameError
     _ = w.WriteMsg(m)
+    // Cache local negative responses (no zone found) with short TTL to prevent repeated lookups
+    s.cache.Set(key, m.Copy(), 5*time.Minute)
 }
 
 // lookup resolves a question from DB applying Geo selection.
