@@ -163,7 +163,7 @@ func main() {
         log.Fatalf("dns server: %v", err)
     }
 
-    restServer := restsrv.NewServer(cfg, gormDB)
+    restServer := restsrv.NewServer(cfg, gormDB, dnsServer)
 
     go func() {
         if err := dnsServer.Start(); err != nil {

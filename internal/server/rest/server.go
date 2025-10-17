@@ -19,15 +19,21 @@ import (
     "namedot/internal/web"
 )
 
+// DNSServer interface for cache invalidation
+type DNSServer interface {
+    InvalidateZoneCache()
+}
+
 type Server struct {
     cfg        *config.Config
     db         *gorm.DB
     r          *gin.Engine
     httpServer *http.Server
     tlsStopCh  chan struct{}
+    dnsServer  DNSServer
 }
 
-func NewServer(cfg *config.Config, db *gorm.DB) *Server {
+func NewServer(cfg *config.Config, db *gorm.DB, dnsServer DNSServer) *Server {
     gin.SetMode(gin.ReleaseMode)
     r := gin.New()
     // Log all API requests to stdout
@@ -47,7 +53,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
         r.Use(ipACLMiddleware(cfg.AllowedCIDRs))
     }
 
-    s := &Server{cfg: cfg, db: db, r: r}
+    s := &Server{cfg: cfg, db: db, r: r, dnsServer: dnsServer}
 
     // Public endpoints (no auth)
     r.GET("/health", s.health)
@@ -205,6 +211,10 @@ func (s *Server) createZone(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
+    // Invalidate DNS zone cache
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
+    }
     c.JSON(http.StatusCreated, z)
 }
 
@@ -243,6 +253,10 @@ func (s *Server) deleteZone(c *gin.Context) {
     }); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
+    }
+    // Invalidate DNS zone cache
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
     }
     c.Status(http.StatusNoContent)
 }
@@ -294,6 +308,10 @@ func (s *Server) createRRSet(c *gin.Context) {
         return
     }
     dbm.BumpSOASerialAuto(s.db, z, s.cfg.AutoSOAOnMissing)
+    // Invalidate DNS cache after zone record change
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
+    }
     c.JSON(http.StatusCreated, set)
 }
 
@@ -331,6 +349,10 @@ func (s *Server) updateRRSet(c *gin.Context) {
         return
     }
     dbm.BumpSOASerialAuto(s.db, z, s.cfg.AutoSOAOnMissing)
+    // Invalidate DNS cache after zone record change
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
+    }
     c.JSON(http.StatusOK, set)
 }
 
@@ -347,6 +369,10 @@ func (s *Server) deleteRRSet(c *gin.Context) {
         return
     }
     dbm.BumpSOASerial(s.db, z.ID)
+    // Invalidate DNS cache after zone record change
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
+    }
     c.Status(http.StatusNoContent)
 }
 
@@ -398,6 +424,10 @@ func (s *Server) importZone(c *gin.Context) {
             return
         }
         dbm.BumpSOASerialAuto(s.db, z, s.cfg.AutoSOAOnMissing)
+        // Invalidate DNS cache after zone import
+        if s.dnsServer != nil {
+            s.dnsServer.InvalidateZoneCache()
+        }
         c.Status(http.StatusNoContent)
     case "bind":
         if err := zoneio.ImportBIND(s.db, &z, c.Request.Body, mode, s.cfg.DefaultTTL); err != nil {
@@ -405,6 +435,10 @@ func (s *Server) importZone(c *gin.Context) {
             return
         }
         dbm.BumpSOASerialAuto(s.db, z, s.cfg.AutoSOAOnMissing)
+        // Invalidate DNS cache after zone import
+        if s.dnsServer != nil {
+            s.dnsServer.InvalidateZoneCache()
+        }
         c.Status(http.StatusNoContent)
     default:
         c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported format"})
@@ -580,6 +614,11 @@ func (s *Server) syncImport(c *gin.Context) {
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
+    }
+
+    // Invalidate DNS cache after sync import
+    if s.dnsServer != nil {
+        s.dnsServer.InvalidateZoneCache()
     }
 
     c.JSON(http.StatusOK, gin.H{"status": "ok", "zones": len(data.Zones), "templates": len(data.Templates)})

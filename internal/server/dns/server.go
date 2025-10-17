@@ -25,6 +25,7 @@ type Server struct {
     tcpServer *dns.Server
     resolver  *dns.Client
     cache     *cache.Cache
+    zoneCache *ZoneCache
     geo       geoip.Provider
     geoStop   func()
     lastRule  string
@@ -32,10 +33,11 @@ type Server struct {
 
 func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
     s := &Server{
-        cfg:      cfg,
-        db:       db,
-        resolver: &dns.Client{Timeout: time.Duration(cfg.Performance.ForwarderTimeoutSec) * time.Second},
-        cache:    cache.New(cfg.Performance.CacheSize),
+        cfg:       cfg,
+        db:        db,
+        resolver:  &dns.Client{Timeout: time.Duration(cfg.Performance.ForwarderTimeoutSec) * time.Second},
+        cache:     cache.New(cfg.Performance.CacheSize),
+        zoneCache: NewZoneCache(5 * time.Minute),
     }
     // GeoIP provider
     if cfg.GeoIP.Enabled && cfg.GeoIP.MMDBPath != "" {
@@ -91,6 +93,13 @@ func (s *Server) Shutdown() error {
     return nil
 }
 
+// InvalidateZoneCache clears the zone cache, forcing a refresh on next DNS query
+func (s *Server) InvalidateZoneCache() {
+    if s.zoneCache != nil {
+        s.zoneCache.Invalidate()
+    }
+}
+
 func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
     m := new(dns.Msg)
     m.SetReply(r)
@@ -101,6 +110,9 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
         return
     }
     q := r.Question[0]
+    // Normalize domain name to lowercase (RFC 1123: DNS names are case-insensitive)
+    // This prevents cache evasion via case variations (e.g., Example.COM vs example.com)
+    q.Name = strings.ToLower(q.Name)
     // Determine client IP (ECS or remote) for geo and cache scoping
     useECS := false
     if s.cfg != nil {
@@ -177,10 +189,15 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
     qname := strings.ToLower(dns.Fqdn(q.Name))
     qtype := dns.TypeToString[q.Qtype]
 
-    // Find the best matching zone suffix
-    var zones []dbm.Zone
-    if err := s.db.Order("length(name) desc").Find(&zones).Error; err != nil {
-        return nil, 0, err
+    // Find the best matching zone suffix (using cache)
+    zones := s.zoneCache.Get()
+    if zones == nil {
+        // Cache miss or expired, fetch from database
+        if err := s.db.Order("length(name) desc").Find(&zones).Error; err != nil {
+            return nil, 0, err
+        }
+        // Store in cache for future use
+        s.zoneCache.Set(zones)
     }
     var zone *dbm.Zone
     for i := range zones {
