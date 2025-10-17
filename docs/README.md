@@ -45,7 +45,7 @@ sudo systemctl start namedot
 ```
 
 #### Manual Download
-Download DEB/RPM packages from [Releases](https://github.com/piligrim/namedot/releases)
+Download DEB/RPM packages from [Releases](https://github.com/foxzi/namedot/releases)
 
 #### Package Documentation
 After installation, all documentation is available at `/usr/share/doc/namedot/`:
@@ -439,7 +439,7 @@ sudo systemctl start namedot
 ```
 
 #### Ручная загрузка
-Скачайте DEB/RPM пакеты из [Releases](https://github.com/piligrim/namedot/releases)
+Скачайте DEB/RPM пакеты из [Releases](https://github.com/foxzi/namedot/releases)
 
 #### Документация в пакете
 После установки вся документация доступна в `/usr/share/doc/namedot/`:

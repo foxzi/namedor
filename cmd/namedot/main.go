@@ -73,7 +73,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "  namedot -t                Validate config\n")
         fmt.Fprintf(os.Stderr, "  namedot -p mypassword     Generate password hash\n")
         fmt.Fprintf(os.Stderr, "  namedot -g mytoken        Generate API token hash\n")
-        fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/piligrim/namedot\n")
+        fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/foxzi/namedot\n")
     }
 
     flag.StringVar(&cfgPath, "c", "", "")

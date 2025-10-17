@@ -64,4 +64,4 @@ Sergei Vorontsov <piligrim@rootnix.net>
 
 ## Repository
 
-https://github.com/piligrim/namedot
+https://github.com/foxzi/namedot

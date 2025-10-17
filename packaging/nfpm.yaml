@@ -16,7 +16,7 @@ description: |
   - Master-Slave replication
   - Web admin panel
 vendor: "namedot"
-homepage: "https://github.com/piligrim/namedot"
+homepage: "https://github.com/foxzi/namedot"
 license: "MIT"
 
 contents:

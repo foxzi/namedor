@@ -1,5 +1,5 @@
 # namedot configuration file
-# Documentation: https://github.com/piligrim/namedot
+# Documentation: https://github.com/foxzi/namedot
 
 # DNS server settings
 listen: "0.0.0.0:53"
