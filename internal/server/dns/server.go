@@ -172,7 +172,7 @@ func (s *Server) serveDNS(w dns.ResponseWriter, r *dns.Msg) {
         fwd.SetQuestion(dns.Fqdn(q.Name), q.Qtype)
         in, _, ferr := s.resolver.Exchange(fwd, net.JoinHostPort(s.cfg.Forwarder, "53"))
         if ferr == nil && in != nil {
-            log.Printf("DNS QUERY forward q=%s type=%s to=%s%s rcode=%d id=%d", q.Name, dns.TypeToString[q.Qtype], s.cfg.Forwarder, geoStr, in.Rcode, r.Id)
+            log.Printf("DNS QUERY forward q=%s type=%s from=%s to=%s%s rcode=%d id=%d", q.Name, dns.TypeToString[q.Qtype], w.RemoteAddr(), s.cfg.Forwarder, geoStr, in.Rcode, r.Id)
             in.Id = r.Id
             _ = w.WriteMsg(in)
             // Cache negative responses (NXDOMAIN, NODATA, etc.) to prevent repeated upstream queries
