@@ -310,7 +310,7 @@ func (s *Server) createRecord(c *gin.Context) {
     }
 
     name := c.PostForm("name")
-	recType := c.PostForm("type")
+	recType := strings.ToUpper(c.PostForm("type"))
 	data := c.PostForm("data")
 	ttlStr := c.PostForm("ttl")
 	country := c.PostForm("country")
@@ -326,6 +326,11 @@ func (s *Server) createRecord(c *gin.Context) {
     // Normalize name to FQDN; handle @/empty as zone apex
     name = toFQDN(name, zone.Name)
 
+    // For CNAME data, treat "@" as zone apex and store FQDN
+    if strings.EqualFold(recType, "CNAME") && strings.TrimSpace(data) == "@" {
+        data = toFQDN("@", zone.Name)
+    }
+
 	ttl, _ := strconv.Atoi(ttlStr)
 	if ttl <= 0 {
 		ttl = 300
@@ -338,7 +343,7 @@ func (s *Server) createRecord(c *gin.Context) {
 
 	// Find or create RRSet
 	var rrset db.RRSet
-	result := s.db.Where("zone_id = ? AND name = ? AND type = ?", zoneID, name, recType).First(&rrset)
+    result := s.db.Where("zone_id = ? AND name = ? AND type = ?", zoneID, name, recType).First(&rrset)
 	if result.Error != nil {
 		// Create new RRSet
 		rrset = db.RRSet{

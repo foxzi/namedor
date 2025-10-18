@@ -303,6 +303,14 @@ func (s *Server) createRRSet(c *gin.Context) {
     if set.TTL == 0 && s.cfg.DefaultTTL > 0 {
         set.TTL = s.cfg.DefaultTTL
     }
+    // Expand CNAME "@" shorthand in record data to apex FQDN before save
+    if strings.EqualFold(set.Type, "CNAME") {
+        for i := range set.Records {
+            if strings.TrimSpace(set.Records[i].Data) == "@" {
+                set.Records[i].Data = fqdn("@", z.Name)
+            }
+        }
+    }
     if err := s.db.Create(&set).Error; err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -343,6 +351,13 @@ func (s *Server) updateRRSet(c *gin.Context) {
             return err
         }
         set.Records = req.recordsNormalized()
+        if strings.EqualFold(set.Type, "CNAME") {
+            for i := range set.Records {
+                if strings.TrimSpace(set.Records[i].Data) == "@" {
+                    set.Records[i].Data = fqdn("@", z.Name)
+                }
+            }
+        }
         return tx.Save(&set).Error
     }); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

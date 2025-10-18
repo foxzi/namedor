@@ -1,12 +1,13 @@
 package web
 
 import (
-	"fmt"
-	"net/http"
-	"strconv"
+    "fmt"
+    "net/http"
+    "strconv"
+    "strings"
 
-	"github.com/gin-gonic/gin"
-	"namedot/internal/db"
+    "github.com/gin-gonic/gin"
+    "namedot/internal/db"
 )
 
 func (s *Server) editRecordForm(c *gin.Context) {
@@ -189,7 +190,20 @@ func (s *Server) updateRecord(c *gin.Context) {
 		asn, _ = strconv.Atoi(asnStr)
 	}
 
-	// Update record data
+    // If this RRSet is CNAME and data is "@", store apex FQDN
+    var rrset db.RRSet
+    rrsetID, _ := strconv.ParseUint(rrsetIDStr, 10, 32)
+    if err := s.db.First(&rrset, rrsetID).Error; err == nil {
+        if strings.EqualFold(rrset.Type, "CNAME") && strings.TrimSpace(data) == "@" {
+            // Need zone name for apex
+            var zone db.Zone
+            if err := s.db.First(&zone, rrset.ZoneID).Error; err == nil {
+                data = toFQDN("@", zone.Name)
+            }
+        }
+    }
+
+    // Update record data
 	record.Data = data
 	record.Country = stringPtr(country)
 	record.Continent = stringPtr(continent)
@@ -201,9 +215,7 @@ func (s *Server) updateRecord(c *gin.Context) {
         return
     }
 
-	// Update RRSet TTL if changed
-	rrsetID, _ := strconv.ParseUint(rrsetIDStr, 10, 32)
-	var rrset db.RRSet
+    // Update RRSet TTL if changed
 	if err := s.db.First(&rrset, rrsetID).Error; err == nil {
 		if uint32(ttl) != rrset.TTL {
 			rrset.TTL = uint32(ttl)

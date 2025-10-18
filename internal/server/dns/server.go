@@ -232,7 +232,12 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
             First(&cnameSet).Error; e2 == nil {
             // Return CNAME rrset as the answer; resolvers will chase it
             for _, rec := range cnameSet.Records {
-                rr, perr := dns.NewRR(fmt.Sprintf("%s %d CNAME %s", qname, cnameSet.TTL, rec.Data))
+                // Support "@" shorthand in CNAME target to mean zone apex
+                target := rec.Data
+                if strings.TrimSpace(target) == "@" {
+                    target = dns.Fqdn(strings.ToLower(zone.Name))
+                }
+                rr, perr := dns.NewRR(fmt.Sprintf("%s %d CNAME %s", qname, cnameSet.TTL, target))
                 if perr == nil { answers = append(answers, rr) }
             }
             return answers, cnameSet.TTL, nil
@@ -246,7 +251,12 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
     s.lastRule = rule
 
     for _, rec := range recs {
-        rr, perr := dns.NewRR(fmt.Sprintf("%s %d %s %s", qname, set.TTL, strings.ToUpper(qtype), rec.Data))
+        // If answering CNAME directly, support "@" shorthand for apex in target
+        data := rec.Data
+        if strings.EqualFold(qtype, "CNAME") && strings.TrimSpace(data) == "@" {
+            data = dns.Fqdn(strings.ToLower(zone.Name))
+        }
+        rr, perr := dns.NewRR(fmt.Sprintf("%s %d %s %s", qname, set.TTL, strings.ToUpper(qtype), data))
         if perr == nil {
             answers = append(answers, rr)
         }
