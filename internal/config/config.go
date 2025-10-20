@@ -26,6 +26,7 @@ type GeoIPConfig struct {
 
 type LogConfig struct {
     DNSVerbose bool `yaml:"dns_verbose"`
+    SQLDebug   bool `yaml:"sql_debug"`
 }
 
 type PerformanceConfig struct {

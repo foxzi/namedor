@@ -31,6 +31,7 @@ geoip:
 
 log:
   dns_verbose: true
+  sql_debug: false  # Set to true to log all SQL queries (useful for debugging)
 
 performance:
   cache_size: 2048

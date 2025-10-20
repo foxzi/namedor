@@ -84,6 +84,7 @@ geoip:
 
 log:
   dns_verbose: true
+  sql_debug: false  # Set to true to log all SQL queries (for debugging)
 ```
 
 2) Build and run:
@@ -479,6 +480,7 @@ geoip:
 
 log:
   dns_verbose: true
+  sql_debug: false  # Установите true для логирования SQL запросов (отладка)
 ```
 
 2) Сборка и запуск:

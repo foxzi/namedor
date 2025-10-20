@@ -147,7 +147,7 @@ func main() {
         return
     }
 
-    gormDB, err := db.Open(cfg.DB)
+    gormDB, err := db.OpenWithDebug(cfg.DB, cfg.Log.SQLDebug)
     if err != nil {
         log.Fatalf("open db: %v", err)
     }

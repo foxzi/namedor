@@ -32,6 +32,7 @@ geoip:
 
 log:
   dns_verbose: true
+  sql_debug: false
 
 performance:
   cache_size: 1024

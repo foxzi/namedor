@@ -43,6 +43,7 @@ geoip:
 # Logging
 log:
   dns_verbose: false
+  sql_debug: false
 
 # Performance tuning
 performance:

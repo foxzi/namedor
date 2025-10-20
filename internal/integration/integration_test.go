@@ -55,7 +55,7 @@ func TestEndToEnd_DNS_and_REST(t *testing.T) {
     }
 
     // DB
-    gormDB, err := db.Open(cfg.DB)
+    gormDB, err := db.OpenWithDebug(cfg.DB, false)
     if err != nil { t.Fatalf("open db: %v", err) }
     if err := db.AutoMigrate(gormDB); err != nil { t.Fatalf("migrate: %v", err) }
 

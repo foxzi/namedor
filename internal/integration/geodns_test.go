@@ -51,7 +51,7 @@ func TestGeoDNS_WithECS_USCountry(t *testing.T) {
         GeoIP: config.GeoIPConfig{Enabled: true, MMDBPath: geoDir, ReloadSec: 0, UseECS: true},
     }
 
-    gormDB, err := db.Open(cfg.DB)
+    gormDB, err := db.OpenWithDebug(cfg.DB, false)
     if err != nil { t.Fatalf("open db: %v", err) }
     if err := db.AutoMigrate(gormDB); err != nil { t.Fatalf("migrate: %v", err) }
 
@@ -155,7 +155,7 @@ func TestGeoDNS_WithECS_Country_Continent_ASN(t *testing.T) {
         DB: config.DBConfig{Driver: "sqlite", DSN: "file:" + tmpDB + "?_foreign_keys=on"},
         GeoIP: config.GeoIPConfig{Enabled: true, MMDBPath: geoDir, ReloadSec: 0, UseECS: true},
     }
-    gdb, err := db.Open(cfg.DB); if err != nil { t.Fatal(err) }
+    gdb, err := db.OpenWithDebug(cfg.DB, false); if err != nil { t.Fatal(err) }
     if err := db.AutoMigrate(gdb); err != nil { t.Fatal(err) }
     dnsServer, _ := dnssrv.NewServer(cfg, gdb)
     restServer := restsrv.NewServer(cfg, gdb)
