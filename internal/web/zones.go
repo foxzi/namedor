@@ -101,8 +101,15 @@ func (s *Server) listZones(c *gin.Context) {
 		}
 	} else {
 		for _, zone := range zones {
-			var recordCount int64
-			s.db.Model(&db.RRSet{}).Where("zone_id = ?", zone.ID).Count(&recordCount)
+			// Load the zone with preloaded RRSets and Records
+			var zoneWithRecords db.Zone
+			s.db.Preload("RRSets.Records").First(&zoneWithRecords, zone.ID)
+
+			// Count total RData records across all RRSets
+			recordCount := 0
+			for _, rrset := range zoneWithRecords.RRSets {
+				recordCount += len(rrset.Records)
+			}
 
 			html += fmt.Sprintf(`
             <tr>
