@@ -3,6 +3,7 @@
 
 # AI settings
 .claude/
+CLAUDE.md
 
 # Databases and data
 *.db
