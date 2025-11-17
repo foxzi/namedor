@@ -62,7 +62,7 @@ func TestEndToEnd_DNS_and_REST(t *testing.T) {
     // Servers
     dnsServer, err := dnssrv.NewServer(cfg, gormDB)
     if err != nil { t.Fatalf("dns: %v", err) }
-    restServer := restsrv.NewServer(cfg, gormDB)
+    restServer := restsrv.NewServer(cfg, gormDB, dnsServer)
 
     go func() { _ = dnsServer.Start() }()
     go func() { _ = restServer.Start() }()

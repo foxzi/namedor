@@ -57,7 +57,7 @@ func TestGeoDNS_WithECS_USCountry(t *testing.T) {
 
     dnsServer, err := dnssrv.NewServer(cfg, gormDB)
     if err != nil { t.Fatalf("dns: %v", err) }
-    restServer := restsrv.NewServer(cfg, gormDB)
+    restServer := restsrv.NewServer(cfg, gormDB, dnsServer)
 
     go func() { _ = dnsServer.Start() }()
     go func() { _ = restServer.Start() }()
@@ -158,7 +158,7 @@ func TestGeoDNS_WithECS_Country_Continent_ASN(t *testing.T) {
     gdb, err := db.OpenWithDebug(cfg.DB, false); if err != nil { t.Fatal(err) }
     if err := db.AutoMigrate(gdb); err != nil { t.Fatal(err) }
     dnsServer, _ := dnssrv.NewServer(cfg, gdb)
-    restServer := restsrv.NewServer(cfg, gdb)
+    restServer := restsrv.NewServer(cfg, gdb, dnsServer)
     go func() { _ = dnsServer.Start() }()
     go func() { _ = restServer.Start() }()
     if err := waitHTTPReady("http://"+restAddr+"/zones", 5*time.Second); err != nil { t.Fatal(err) }
