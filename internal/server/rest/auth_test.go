@@ -48,9 +48,13 @@ func setupTestServer(t *testing.T, cfg *config.Config) (*Server, *gin.Engine) {
 	return server, server.r
 }
 
-type mockDNSServer struct{}
+type mockDNSServer struct {
+	invalidateCalled bool
+}
 
-func (m *mockDNSServer) InvalidateZoneCache() {}
+func (m *mockDNSServer) InvalidateZoneCache() {
+	m.invalidateCalled = true
+}
 
 func TestAuthMiddleware(t *testing.T) {
 	// Generate bcrypt hash for testing
