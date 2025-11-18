@@ -16,6 +16,10 @@ Full integration test for DNS record types that:
 - Tests CNAME records (canonical names)
 - Tests MX records (mail exchange)
 - Tests TXT records (text data, SPF, DMARC)
+- Tests NS records (name servers)
+- Tests SRV records (service records)
+- Tests PTR records (pointer/reverse DNS)
+- Tests CAA records (certificate authority)
 - Validates DNS responses using `dig`
 - Automatically stops the server and cleans up
 
@@ -38,7 +42,11 @@ make test-integration-records
 - CNAME records (aliases)
 - MX records (multiple mail servers with priorities)
 - TXT records (DMARC, SPF policies)
-- 9 test cases total
+- NS records (name servers)
+- SRV records (service records)
+- PTR records (pointer/reverse DNS)
+- CAA records (certificate authority authorization)
+- 17 test cases total
 
 ### GeoDNS Integration Tests
 
@@ -97,6 +105,10 @@ make test-integration
 - Тестирует CNAME записи (канонические имена)
 - Тестирует MX записи (почтовые серверы)
 - Тестирует TXT записи (текстовые данные, SPF, DMARC)
+- Тестирует NS записи (серверы имен)
+- Тестирует SRV записи (сервисные записи)
+- Тестирует PTR записи (обратная зона)
+- Тестирует CAA записи (сертификационные центры)
 - Проверяет DNS ответы используя `dig`
 - Автоматически останавливает сервер и очищает данные
 
@@ -119,7 +131,11 @@ make test-integration-records
 - CNAME записи (алиасы)
 - MX записи (несколько почтовых серверов с приоритетами)
 - TXT записи (DMARC, SPF политики)
-- Всего 9 тестовых сценариев
+- NS записи (серверы имен)
+- SRV записи (сервисные записи)
+- PTR записи (обратная зона)
+- CAA записи (сертификационные центры)
+- Всего 17 тестовых сценариев
 
 ### Интеграционные тесты GeoDNS
 

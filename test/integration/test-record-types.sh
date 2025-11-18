@@ -1,6 +1,6 @@
 #!/bin/bash
 # Integration tests for DNS record types
-# Tests A, AAAA, CNAME, MX, TXT record types
+# Tests A, AAAA, CNAME, MX, TXT, NS, SRV, PTR, CAA record types
 
 set -e
 
@@ -243,6 +243,85 @@ else
   exit 1
 fi
 
+# Create NS record
+echo -n "Creating NS record (@$ZONE_NAME)... "
+if curl -s -X POST "$API_BASE/zones/$ZONE_ID/rrsets" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"@\",
+    \"type\": \"NS\",
+    \"ttl\": 3600,
+    \"records\": [
+      {\"data\": \"ns1.$ZONE_NAME.\"},
+      {\"data\": \"ns2.$ZONE_NAME.\"}
+    ]
+  }" > /dev/null 2>&1; then
+  echo -e "${GREEN}OK${NC}"
+else
+  echo -e "${RED}FAIL${NC}"
+  exit 1
+fi
+
+# Create SRV record
+echo -n "Creating SRV record (_http._tcp.$ZONE_NAME)... "
+if curl -s -X POST "$API_BASE/zones/$ZONE_ID/rrsets" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"_http._tcp\",
+    \"type\": \"SRV\",
+    \"ttl\": 300,
+    \"records\": [
+      {\"data\": \"10 60 80 server1.$ZONE_NAME.\"},
+      {\"data\": \"20 40 80 server2.$ZONE_NAME.\"}
+    ]
+  }" > /dev/null 2>&1; then
+  echo -e "${GREEN}OK${NC}"
+else
+  echo -e "${RED}FAIL${NC}"
+  exit 1
+fi
+
+# Create PTR record
+echo -n "Creating PTR record (1.$ZONE_NAME)... "
+if curl -s -X POST "$API_BASE/zones/$ZONE_ID/rrsets" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"1\",
+    \"type\": \"PTR\",
+    \"ttl\": 300,
+    \"records\": [
+      {\"data\": \"host1.$ZONE_NAME.\"}
+    ]
+  }" > /dev/null 2>&1; then
+  echo -e "${GREEN}OK${NC}"
+else
+  echo -e "${RED}FAIL${NC}"
+  exit 1
+fi
+
+# Create CAA record
+echo -n "Creating CAA record (@$ZONE_NAME)... "
+if curl -s -X POST "$API_BASE/zones/$ZONE_ID/rrsets" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"@\",
+    \"type\": \"CAA\",
+    \"ttl\": 300,
+    \"records\": [
+      {\"data\": \"0 issue \\\"letsencrypt.org\\\"\"},
+      {\"data\": \"0 issuewild \\\";\\\"\"}
+    ]
+  }" > /dev/null 2>&1; then
+  echo -e "${GREEN}OK${NC}"
+else
+  echo -e "${RED}FAIL${NC}"
+  exit 1
+fi
+
 echo ""
 
 # Function to test DNS query
@@ -331,6 +410,41 @@ echo ""
 
 test_query "_dmarc.$ZONE_NAME" "TXT" "v=DMARC1" "TXT record should contain DMARC policy"
 test_query "$ZONE_NAME" "TXT" "v=spf1" "TXT record should contain SPF policy"
+
+echo ""
+echo "========================================"
+echo "NS Record Tests"
+echo "========================================"
+echo ""
+
+test_query_multiple "$ZONE_NAME" "NS" 2 "NS record should return 2 name servers"
+test_query "$ZONE_NAME" "NS" "ns1.$ZONE_NAME" "NS record should contain ns1.$ZONE_NAME"
+
+echo ""
+echo "========================================"
+echo "SRV Record Tests"
+echo "========================================"
+echo ""
+
+test_query_multiple "_http._tcp.$ZONE_NAME" "SRV" 2 "SRV record should return 2 service records"
+test_query "_http._tcp.$ZONE_NAME" "SRV" "server1.$ZONE_NAME" "SRV record should contain server1.$ZONE_NAME"
+
+echo ""
+echo "========================================"
+echo "PTR Record Tests"
+echo "========================================"
+echo ""
+
+test_query "1.$ZONE_NAME" "PTR" "host1.$ZONE_NAME" "PTR record should point to host1.$ZONE_NAME"
+
+echo ""
+echo "========================================"
+echo "CAA Record Tests"
+echo "========================================"
+echo ""
+
+test_query_multiple "$ZONE_NAME" "CAA" 2 "CAA record should return 2 CAA records"
+test_query "$ZONE_NAME" "CAA" "letsencrypt.org" "CAA record should contain letsencrypt.org"
 
 echo ""
 echo "========================================"
