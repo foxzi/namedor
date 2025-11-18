@@ -8,7 +8,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(COMMIT) -X main.BuildDate=$(DATE)"
 
-.PHONY: all build run test test-all test-unit test-int test-geo mmdb-clean clean package package-deb package-rpm
+.PHONY: all build run test test-all test-unit test-int test-geo test-cover test-verbose test-report mmdb-clean clean package package-deb package-rpm
 
 all: build
 
@@ -27,7 +27,7 @@ test-all:
 	$(GO) test ./...
 
 test-unit:
-	$(GO) test ./internal/db ./internal/server/... -count=1
+	$(GO) test ./internal/cache ./internal/config ./internal/db ./internal/geoip ./internal/replication ./internal/server/... -count=1
 
 test-int:
 	$(GO) test ./internal/integration -count=1
@@ -35,11 +35,23 @@ test-int:
 test-geo:
 	$(GO) test ./internal/integration -run 'GeoDNS' -count=1
 
+test-cover:
+	$(GO) test ./... -cover
+
+test-verbose:
+	$(GO) test -v ./...
+
+test-report:
+	$(GO) test ./... -coverprofile=coverage.out
+	$(GO) tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+	@echo "Open it in your browser to see detailed coverage"
+
 mmdb-clean:
 	rm -f ./geoipdb/*.mmdb
 
 clean:
-	rm -f $(BIN) *.db *.test *.out namedot_dev.db *.deb *.rpm
+	rm -f $(BIN) *.db *.test *.out namedot_dev.db *.deb *.rpm coverage.out coverage.html
 
 # Package building
 build-for-package:
