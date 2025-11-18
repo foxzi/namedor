@@ -575,33 +575,3 @@ func TestSyncImport(t *testing.T) {
 	}
 }
 
-// TestSyncImport_TransactionRollback tests that import failures rollback properly
-func TestSyncImport_TransactionRollback(t *testing.T) {
-	t.Run("rollback on error maintains database consistency", func(t *testing.T) {
-		db := setupTestDB(t)
-
-		// Create existing zone
-		existingZone := dbm.Zone{Name: "existing.com"}
-		db.Create(&existingZone)
-
-		var countBefore int64
-		db.Model(&dbm.Zone{}).Count(&countBefore)
-
-		// Note: It's difficult to trigger a database error in SQLite in-memory
-		// This test documents the expected behavior but may not actually
-		// trigger a rollback with the current implementation.
-		// In production with Postgres/MySQL, constraint violations would
-		// trigger rollbacks properly.
-
-		t.Log("Transaction rollback test: Limited coverage with SQLite in-memory")
-		t.Log("In production with Postgres/MySQL, failed imports should rollback")
-		t.Log("and leave the database in the state it was before the import started")
-
-		var countAfter int64
-		db.Model(&dbm.Zone{}).Count(&countAfter)
-
-		if countAfter != countBefore {
-			t.Errorf("expected zone count to remain %d, got %d", countBefore, countAfter)
-		}
-	})
-}

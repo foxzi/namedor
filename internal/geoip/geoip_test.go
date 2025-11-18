@@ -173,42 +173,6 @@ func TestInfo_EmptyValues(t *testing.T) {
 	}
 }
 
-func TestInfo_PartialData(t *testing.T) {
-	tests := []struct {
-		name string
-		info Info
-	}{
-		{
-			name: "Country only",
-			info: Info{Country: "US"},
-		},
-		{
-			name: "Continent only",
-			info: Info{Continent: "EU"},
-		},
-		{
-			name: "ASN only",
-			info: Info{ASN: 15169},
-		},
-		{
-			name: "Country and Continent",
-			info: Info{Country: "FR", Continent: "EU"},
-		},
-		{
-			name: "Country and ASN",
-			info: Info{Country: "JP", ASN: 2516},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Just verify the struct can hold partial data
-			// This is a sanity test that partial Info is valid
-			_ = tt.info
-		})
-	}
-}
-
 func TestNewFromPath_NonExistentPath(t *testing.T) {
 	provider, cleanup, err := NewFromPath("/nonexistent/path", 0, nil, 0)
 	defer cleanup()
