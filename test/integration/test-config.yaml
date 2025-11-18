@@ -1,0 +1,32 @@
+listen: ":5353"
+forwarder: ""
+enable_dnssec: false
+api_token: "test-token-12345"
+rest_listen: ":7070"
+auto_soa_on_missing: true
+default_ttl: 60
+
+db:
+  driver: "sqlite"
+  dsn: "file:./test/integration/test.db?_foreign_keys=on"
+
+geoip:
+  enabled: true
+  mmdb_path: "./geoipdb"
+  reload_sec: 300
+  use_ecs: true
+
+log:
+  dns_verbose: true
+  sql_debug: false
+
+performance:
+  cache_size: 256
+  dns_timeout_sec: 2
+  forwarder_timeout_sec: 2
+
+admin:
+  enabled: false
+
+replication:
+  mode: "standalone"
