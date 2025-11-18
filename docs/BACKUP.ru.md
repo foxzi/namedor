@@ -68,6 +68,47 @@ curl -X POST \
   "http://localhost:7070/zones/{id}/import?format=bind&mode=upsert"
 ```
 
+## CLI экспорт/импорт (встроенный)
+
+Бинарник namedot включает встроенные команды для прямого бэкапа и восстановления базы данных:
+
+### Экспорт всех зон
+
+```bash
+# Экспорт в файл
+namedot -export backup.json
+
+# С кастомным конфигом
+namedot -c /etc/namedot/config.yaml -export backup.json
+```
+
+### Импорт зон
+
+```bash
+# Импорт в режиме merge (по умолчанию - сохраняет существующие зоны)
+namedot -import backup.json
+
+# Импорт в режиме replace (удаляет все существующие зоны перед импортом)
+namedot -import backup.json -import-mode replace
+
+# С кастомным конфигом
+namedot -c /etc/namedot/config.yaml -import backup.json
+```
+
+**Режимы импорта:**
+- `merge` (по умолчанию): Импортировать зоны и записи, сохраняя существующие данные. Если зона существует, её записи заменяются.
+- `replace`: Удалить все существующие зоны и импортировать из бэкапа (полное восстановление).
+
+**Преимущества CLI экспорта/импорта:**
+- Работает напрямую с базой данных (не требуется запущенный сервер)
+- Не требуется аутентификация
+- Быстрее чем бэкап через API
+- Полезно для обслуживания и миграций
+
+## API экспорт/импорт
+
+Для бэкапа во время работы сервера используйте REST API:
+
 ## Скрипты для бэкапа
 
 ### Бэкап всех зон
@@ -238,11 +279,18 @@ TOKEN="your-api-token" ./restore-zones.sh ./backup-20241118-230000
 
 ### Шаг 1: Бэкап текущих данных
 
+**Вариант А: Используя CLI (Рекомендуется)**
 ```bash
 # Остановить текущий сервис namedot
 sudo systemctl stop namedot
 
-# Создать бэкап
+# Создать бэкап напрямую из базы данных
+namedot -c /etc/namedot/config.yaml -export /tmp/backup-$(date +%Y%m%d).json
+```
+
+**Вариант Б: Используя API (если сервер запущен)**
+```bash
+# Создать бэкап через API
 TOKEN="your-api-token" ./backup-zones.sh
 ```
 
@@ -269,8 +317,21 @@ sudo systemctl status namedot
 
 ### Шаг 4: Восстановление данных
 
+**Вариант А: Используя CLI (Рекомендуется)**
 ```bash
-# Восстановить все зоны из бэкапа
+# Остановить namedot
+sudo systemctl stop namedot
+
+# Восстановить из бэкапа (режим replace - чистое восстановление)
+namedot -c /etc/namedot/config.yaml -import /tmp/backup-20241118.json -import-mode replace
+
+# Запустить namedot
+sudo systemctl start namedot
+```
+
+**Вариант Б: Используя API (если сервер запущен)**
+```bash
+# Восстановить все зоны из бэкапа через API
 TOKEN="your-api-token" ./restore-zones.sh ./backup-20241118-230000
 ```
 

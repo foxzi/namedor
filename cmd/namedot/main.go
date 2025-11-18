@@ -48,11 +48,14 @@ func main() {
     }
 
     var (
-        cfgPath  string
-        testOnly bool
-        password string
-        token    string
-        showVer  bool
+        cfgPath    string
+        testOnly   bool
+        password   string
+        token      string
+        showVer    bool
+        exportFile string
+        importFile string
+        importMode string
     )
 
     flag.Usage = func() {
@@ -63,16 +66,23 @@ func main() {
         fmt.Fprintf(os.Stderr, "  -t, -test                 Validate config and exit\n")
         fmt.Fprintf(os.Stderr, "  -p, -password <password>  Generate bcrypt hash for admin password and exit\n")
         fmt.Fprintf(os.Stderr, "  -g, -gen-token <token>    Generate bcrypt hash for API token and exit\n")
+        fmt.Fprintf(os.Stderr, "  -export <file>            Export all zones to JSON file and exit\n")
+        fmt.Fprintf(os.Stderr, "  -import <file>            Import zones from JSON file and exit\n")
+        fmt.Fprintf(os.Stderr, "  -import-mode <mode>       Import mode: merge (default) or replace\n")
         fmt.Fprintf(os.Stderr, "  -v, -version              Print version and exit\n")
         fmt.Fprintf(os.Stderr, "  -h, -help                 Show this help message\n")
         fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
         fmt.Fprintf(os.Stderr, "  SGDNS_CONFIG              Config file path (overridden by -c flag)\n")
         fmt.Fprintf(os.Stderr, "\nExamples:\n")
-        fmt.Fprintf(os.Stderr, "  namedot                   Start server with config.yaml\n")
-        fmt.Fprintf(os.Stderr, "  namedot -c prod.yaml      Start with custom config\n")
-        fmt.Fprintf(os.Stderr, "  namedot -t                Validate config\n")
-        fmt.Fprintf(os.Stderr, "  namedot -p mypassword     Generate password hash\n")
-        fmt.Fprintf(os.Stderr, "  namedot -g mytoken        Generate API token hash\n")
+        fmt.Fprintf(os.Stderr, "  namedot                          Start server with config.yaml\n")
+        fmt.Fprintf(os.Stderr, "  namedot -c prod.yaml             Start with custom config\n")
+        fmt.Fprintf(os.Stderr, "  namedot -t                       Validate config\n")
+        fmt.Fprintf(os.Stderr, "  namedot -p mypassword            Generate password hash\n")
+        fmt.Fprintf(os.Stderr, "  namedot -g mytoken               Generate API token hash\n")
+        fmt.Fprintf(os.Stderr, "  namedot -export backup.json      Export all zones to file\n")
+        fmt.Fprintf(os.Stderr, "  namedot -import backup.json      Import zones from file (merge)\n")
+        fmt.Fprintf(os.Stderr, "  namedot -import backup.json -import-mode replace\n")
+        fmt.Fprintf(os.Stderr, "                                   Import zones (replace all)\n")
         fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/foxzi/namedot\n")
     }
 
@@ -84,6 +94,9 @@ func main() {
     flag.StringVar(&password, "password", "", "")
     flag.StringVar(&token, "g", "", "")
     flag.StringVar(&token, "gen-token", "", "")
+    flag.StringVar(&exportFile, "export", "", "")
+    flag.StringVar(&importFile, "import", "", "")
+    flag.StringVar(&importMode, "import-mode", "merge", "")
     flag.BoolVar(&showVer, "v", false, "")
     flag.BoolVar(&showVer, "version", false, "")
     flag.Parse()
@@ -153,6 +166,33 @@ func main() {
     }
     if err := db.AutoMigrate(gormDB); err != nil {
         log.Fatalf("migrate db: %v", err)
+    }
+
+    // Handle export command
+    if exportFile != "" {
+        fmt.Printf("Exporting zones to %s...\n", exportFile)
+        if err := db.ExportZones(gormDB, exportFile); err != nil {
+            log.Fatalf("export failed: %v", err)
+        }
+        var count int64
+        gormDB.Model(&db.Zone{}).Count(&count)
+        fmt.Printf("Successfully exported %d zones to %s\n", count, exportFile)
+        return
+    }
+
+    // Handle import command
+    if importFile != "" {
+        if importMode != "merge" && importMode != "replace" {
+            log.Fatalf("invalid import mode: %s (must be 'merge' or 'replace')", importMode)
+        }
+        fmt.Printf("Importing zones from %s (mode: %s)...\n", importFile, importMode)
+        if err := db.ImportZones(gormDB, importFile, importMode); err != nil {
+            log.Fatalf("import failed: %v", err)
+        }
+        var count int64
+        gormDB.Model(&db.Zone{}).Count(&count)
+        fmt.Printf("Successfully imported zones. Total zones in database: %d\n", count)
+        return
     }
 
     ctx, cancel := context.WithCancel(context.Background())

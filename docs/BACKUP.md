@@ -68,6 +68,47 @@ curl -X POST \
   "http://localhost:7070/zones/{id}/import?format=bind&mode=upsert"
 ```
 
+## CLI Export/Import (Built-in)
+
+The namedot binary includes built-in commands for direct database backup and restore:
+
+### Export All Zones
+
+```bash
+# Export to file
+namedot -export backup.json
+
+# With custom config
+namedot -c /etc/namedot/config.yaml -export backup.json
+```
+
+### Import Zones
+
+```bash
+# Import with merge mode (default - keeps existing zones)
+namedot -import backup.json
+
+# Import with replace mode (deletes all existing zones first)
+namedot -import backup.json -import-mode replace
+
+# With custom config
+namedot -c /etc/namedot/config.yaml -import backup.json
+```
+
+**Import Modes:**
+- `merge` (default): Import zones and records, keeping existing data. If a zone exists, its records are replaced.
+- `replace`: Delete all existing zones and import from backup (complete restore).
+
+**Advantages of CLI export/import:**
+- Works directly with database (no need for running server)
+- No authentication required
+- Faster than API-based backup
+- Useful for maintenance and migrations
+
+## API Export/Import
+
+For backup while the server is running, use the REST API endpoints:
+
 ## Backup Scripts
 
 ### Backup All Zones
@@ -238,11 +279,18 @@ When upgrading namedot to a new version (especially with schema changes):
 
 ### Step 1: Backup Current Data
 
+**Option A: Using CLI (Recommended)**
 ```bash
 # Stop the current namedot service
 sudo systemctl stop namedot
 
-# Create backup
+# Create backup directly from database
+namedot -c /etc/namedot/config.yaml -export /tmp/backup-$(date +%Y%m%d).json
+```
+
+**Option B: Using API (if server is running)**
+```bash
+# Create backup via API
 TOKEN="your-api-token" ./backup-zones.sh
 ```
 
@@ -269,8 +317,21 @@ sudo systemctl status namedot
 
 ### Step 4: Restore Data
 
+**Option A: Using CLI (Recommended)**
 ```bash
-# Restore all zones from backup
+# Stop namedot
+sudo systemctl stop namedot
+
+# Restore from backup (replace mode - clean restore)
+namedot -c /etc/namedot/config.yaml -import /tmp/backup-20241118.json -import-mode replace
+
+# Start namedot
+sudo systemctl start namedot
+```
+
+**Option B: Using API (if server is running)**
+```bash
+# Restore all zones from backup via API
 TOKEN="your-api-token" ./restore-zones.sh ./backup-20241118-230000
 ```
 
