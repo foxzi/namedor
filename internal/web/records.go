@@ -74,7 +74,7 @@ func (s *Server) listRecords(c *gin.Context) {
 	totalPages := int((total + int64(perPage) - 1) / int64(perPage))
 
 	// Build filter and search form
-	recordTypes := []string{"ALL", "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV"}
+	recordTypes := []string{"ALL", "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "PTR", "CAA"}
 	filterForm := fmt.Sprintf(`
 	<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
 		<form hx-get="/admin/zones/%d/records" hx-target="#zones-list" hx-swap="innerHTML" style="display: flex; gap: 0.5rem; flex: 1;">
@@ -232,12 +232,16 @@ html := fmt.Sprintf(`
                 <label>%s</label>
                 <select name="type" required
                     style="width: 100%%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px;">
-                    <option value="A">A</option>
-                    <option value="AAAA">AAAA</option>
-                    <option value="CNAME">CNAME</option>
-                    <option value="MX">MX</option>
-                    <option value="TXT">TXT</option>
-                    <option value="NS">NS</option>
+                    <option value="A">A - IPv4 Address</option>
+                    <option value="AAAA">AAAA - IPv6 Address</option>
+                    <option value="CNAME">CNAME - Canonical Name</option>
+                    <option value="MX">MX - Mail Exchange</option>
+                    <option value="TXT">TXT - Text Record</option>
+                    <option value="NS">NS - Name Server</option>
+                    <option value="SRV">SRV - Service Record</option>
+                    <option value="PTR">PTR - Pointer Record</option>
+                    <option value="CAA">CAA - Certificate Authority</option>
+                    <option value="SOA">SOA - Start of Authority</option>
                 </select>
             </div>
 
