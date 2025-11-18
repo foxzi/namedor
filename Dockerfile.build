@@ -1,0 +1,30 @@
+# Build-only Dockerfile for compiling namedot binary
+# Usage: docker build --target builder --output type=local,dest=. -f Dockerfile.build .
+
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates gcc musl-dev
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build arguments for version info
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+
+# Build binary
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v \
+    -ldflags="-X main.Version=${VERSION} -X main.GitCommit=${COMMIT} -X main.BuildDate=${BUILD_DATE} -s -w" \
+    -o namedot ./cmd/namedot
+
+# Export stage - this will be extracted when using --output
+FROM scratch AS export
+COPY --from=builder /build/namedot /namedot

@@ -8,13 +8,11 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(COMMIT) -X main.BuildDate=$(DATE)"
 
-.PHONY: all build run test test-all test-unit test-int test-geo test-integration-geodns test-integration-records test-integration test-cover test-verbose test-report mmdb-clean clean package package-deb package-rpm
+.PHONY: all build run test test-all test-unit test-int test-geo test-integration-geodns test-integration-records test-integration test-cover test-verbose test-report mmdb-clean clean package package-deb package-rpm build-docker build-in-docker
 
 all: build
 
-build: $(BIN)
-
-$(BIN):
+build:
 	$(GO) build $(LDFLAGS) -o $(BIN) ./cmd/$(BIN)
 
 run: build
@@ -86,3 +84,29 @@ package-rpm: build-for-package
 package: package-deb package-rpm
 	@echo "All packages built successfully!"
 	@ls -lh *.deb *.rpm
+
+# Docker build
+build-docker:
+	@echo "Building namedot in Docker container (version: $(VERSION))..."
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILD_DATE=$(DATE) \
+		-t namedot:$(VERSION) \
+		-t namedot:latest \
+		.
+	@echo "Docker image built: namedot:$(VERSION)"
+
+# Build binary using Docker (useful for cross-platform builds)
+build-in-docker:
+	@echo "Building namedot binary in Docker container (version: $(VERSION))..."
+	@docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILD_DATE=$(DATE) \
+		--target builder \
+		--output type=local,dest=. \
+		-f Dockerfile.build \
+		.
+	@echo "Binary built successfully"
+	@ls -lh $(BIN)

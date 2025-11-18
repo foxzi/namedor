@@ -13,8 +13,15 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Build arguments for version info
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+
 # Build binary
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o namedot ./cmd/namedot
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.GitCommit=${COMMIT} -X main.BuildDate=${BUILD_DATE}" \
+    -o namedot ./cmd/namedot
 
 # Runtime stage
 FROM alpine:latest
