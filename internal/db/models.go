@@ -17,9 +17,9 @@ type Zone struct {
 
 type RRSet struct {
     ID        uint           `gorm:"primaryKey" json:"id"`
-    ZoneID    uint           `gorm:"index:idx_rrset_lookup" json:"zone_id"`
-    Name      string         `gorm:"index:idx_rrset_lookup;size:255" json:"name"`
-    Type      string         `gorm:"index:idx_rrset_lookup;size:20" json:"type"`
+    ZoneID    uint           `gorm:"uniqueIndex:idx_rrset_unique;index:idx_rrset_lookup" json:"zone_id"`
+    Name      string         `gorm:"uniqueIndex:idx_rrset_unique;index:idx_rrset_lookup;size:255" json:"name"`
+    Type      string         `gorm:"uniqueIndex:idx_rrset_unique;index:idx_rrset_lookup;size:20" json:"type"`
     TTL       uint32         `json:"ttl"`
     CreatedAt time.Time      `json:"created_at"`
     UpdatedAt time.Time      `json:"updated_at"`

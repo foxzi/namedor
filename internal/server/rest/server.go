@@ -293,10 +293,31 @@ func (s *Server) createRRSet(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
         return
     }
+
+    name := strings.ToLower(fqdn(req.Name, z.Name))
+    recordType := strings.ToUpper(req.Type)
+
+    // Check if RRSet already exists (zone_id, name, type must be unique)
+    var existing dbm.RRSet
+    err := s.db.Where("zone_id = ? AND name = ? AND type = ?", z.ID, name, recordType).First(&existing).Error
+    if err == nil {
+        // RRSet already exists, return 409 Conflict
+        c.JSON(http.StatusConflict, gin.H{
+            "error": "rrset already exists",
+            "message": "A record with this name and type already exists in this zone. Use PUT to update or DELETE first.",
+            "existing_id": existing.ID,
+        })
+        return
+    } else if err != gorm.ErrRecordNotFound {
+        // Database error
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
     set := dbm.RRSet{
         ZoneID:  z.ID,
-        Name:    strings.ToLower(fqdn(req.Name, z.Name)),
-        Type:    strings.ToUpper(req.Type),
+        Name:    name,
+        Type:    recordType,
         TTL:     req.TTL,
         Records: req.recordsNormalized(),
     }
