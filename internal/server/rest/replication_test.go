@@ -101,21 +101,35 @@ func TestSyncExport(t *testing.T) {
 					zone := dbm.Zone{Name: "example" + string(rune('0'+i)) + ".com"}
 					db.Create(&zone)
 
-					for j := 1; j <= 2; j++ {
-						rrset := dbm.RRSet{
-							ZoneID: zone.ID,
-							Name:   "@",
-							Type:   "A",
-							TTL:    300,
-						}
-						db.Create(&rrset)
-
-						record := dbm.RData{
-							RRSetID: rrset.ID,
-							Data:    "192.168.1." + string(rune('0'+j)),
-						}
-						db.Create(&record)
+					// Create first RRSet with type A
+					rrset1 := dbm.RRSet{
+						ZoneID: zone.ID,
+						Name:   "@",
+						Type:   "A",
+						TTL:    300,
 					}
+					db.Create(&rrset1)
+
+					record1 := dbm.RData{
+						RRSetID: rrset1.ID,
+						Data:    "192.168.1.1",
+					}
+					db.Create(&record1)
+
+					// Create second RRSet with type MX
+					rrset2 := dbm.RRSet{
+						ZoneID: zone.ID,
+						Name:   "@",
+						Type:   "MX",
+						TTL:    300,
+					}
+					db.Create(&rrset2)
+
+					record2 := dbm.RData{
+						RRSetID: rrset2.ID,
+						Data:    "10 mail.example" + string(rune('0'+i)) + ".com",
+					}
+					db.Create(&record2)
 				}
 			},
 			expectedZones: 3,
