@@ -8,6 +8,15 @@ enable_dnssec: false
 auto_soa_on_missing: true
 default_ttl: 300
 
+# Default NS servers for new zones
+ns:
+  servers:
+    - "ns1.{zone}"
+    - "ns2.{zone}"
+  auto_on_missing: true   # Add NS records when creating new zone
+  auto_fix: true          # Add missing NS records on server startup
+  ttl: 86400              # TTL for NS records (default: 86400)
+
 # REST API settings (localhost only for security)
 rest_listen: "127.0.0.1:8080"
 # api_token: "CHANGE_ME_PLEASE"  # Deprecated: use api_token_hash instead

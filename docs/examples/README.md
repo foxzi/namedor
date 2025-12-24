@@ -97,6 +97,12 @@ All examples support the following key features:
 - `enabled` - Enable/disable web admin interface
 - `username` / `password_hash` - Admin credentials
 
+### Default NS Servers
+- `ns.servers` - List of default NS server names (supports `{zone}` placeholder)
+- `ns.auto_on_missing` - Auto-create NS records when creating new zones
+- `ns.auto_fix` - Auto-fix missing NS records on server startup
+- `ns.ttl` - TTL for NS records (default: 86400)
+
 ## After Installation
 
 When installed from a package, these examples are available at:

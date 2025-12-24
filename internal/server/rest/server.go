@@ -219,6 +219,10 @@ func (s *Server) createZone(c *gin.Context) {
 	}
 	// Ensure SOA exists right after zone creation when auto is enabled
 	dbm.BumpSOASerialAuto(s.db, z, s.cfg.SOA.AutoOnMissing, s.cfg.SOA.Primary, s.cfg.SOA.Hostmaster)
+	// Ensure NS records exist right after zone creation when auto is enabled
+	if s.cfg.NS.AutoOnMissing {
+		dbm.EnsureDefaultNS(s.db, z, s.cfg.NS.Servers, s.cfg.NS.TTL)
+	}
 	// Invalidate DNS zone cache
 	if s.dnsServer != nil {
 		s.dnsServer.InvalidateZoneCache()

@@ -210,6 +210,13 @@ func (s *Server) createZone(c *gin.Context) {
         return
     }
 
+	// Ensure SOA exists right after zone creation when auto is enabled
+	db.BumpSOASerialAuto(s.db, zone, s.cfg.SOA.AutoOnMissing, s.cfg.SOA.Primary, s.cfg.SOA.Hostmaster)
+	// Ensure NS records exist right after zone creation when auto is enabled
+	if s.cfg.NS.AutoOnMissing {
+		db.EnsureDefaultNS(s.db, zone, s.cfg.NS.Servers, s.cfg.NS.TTL)
+	}
+
 	// Return updated zones list
 	s.listZones(c)
 }

@@ -199,6 +199,8 @@ func main() {
 
 	// Ensure SOA exists/updated on startup when auto is enabled
 	ensureAllSOA(gormDB, cfg)
+	// Ensure NS records exist on startup when auto_fix is enabled
+	ensureAllNS(gormDB, cfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -261,5 +263,26 @@ func ensureAllSOA(gormDB *gorm.DB, cfg *config.Config) {
 	}
 	for _, z := range zones {
 		db.BumpSOASerialAuto(gormDB, z, true, cfg.SOA.Primary, cfg.SOA.Hostmaster)
+	}
+}
+
+// ensureAllNS creates default NS records for all zones if auto_fix is enabled.
+func ensureAllNS(gormDB *gorm.DB, cfg *config.Config) {
+	if !cfg.NS.AutoFix || len(cfg.NS.Servers) == 0 {
+		return
+	}
+	var zones []db.Zone
+	if err := gormDB.Find(&zones).Error; err != nil {
+		log.Printf("NS ensure: failed to load zones: %v", err)
+		return
+	}
+	fixed := 0
+	for _, z := range zones {
+		if db.EnsureDefaultNS(gormDB, z, cfg.NS.Servers, cfg.NS.TTL) {
+			fixed++
+		}
+	}
+	if fixed > 0 {
+		log.Printf("NS auto-fix: added default NS records to %d zones", fixed)
 	}
 }

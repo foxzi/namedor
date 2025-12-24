@@ -75,6 +75,14 @@ soa:
   primary: "ns1.{zone}"
   hostmaster: "hostmaster.{zone}"
 
+ns:
+  servers:
+    - "ns1.{zone}"
+    - "ns2.{zone}"
+  auto_on_missing: true
+  auto_fix: true
+  ttl: 86400
+
 db:
   driver: "sqlite"
   dsn: "file:namedot.db?_foreign_keys=on"
@@ -352,6 +360,10 @@ Config Reference
   - SERIAL: текущий Unix timestamp
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
+- `ns.servers`: list of default NS server names for new zones. Supports `{zone}` placeholder (e.g., `ns1.{zone}` → `ns1.example.com.`)
+- `ns.auto_on_missing`: if true, NS records are automatically created when a new zone is created
+- `ns.auto_fix`: if true, missing NS records are automatically added to existing zones on server startup
+- `ns.ttl`: TTL for auto-created NS records (default: 86400)
 - `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
 
 Security Features
@@ -480,6 +492,14 @@ soa:
   auto_on_missing: true
   primary: "ns1.{zone}"
   hostmaster: "hostmaster.{zone}"
+
+ns:
+  servers:
+    - "ns1.{zone}"
+    - "ns2.{zone}"
+  auto_on_missing: true
+  auto_fix: true
+  ttl: 86400
 
 db:
   driver: "sqlite"
@@ -758,6 +778,10 @@ VERSION=$VERSION nfpm pkg --packager rpm --config packaging/nfpm.yaml --target .
   - SERIAL: текущий Unix timestamp
   - Refresh/Retry/Expire/Minimum: 7200/3600/1209600/300
   - TTL: 3600
+- `ns.servers`: список NS-серверов по умолчанию для новых зон. Поддерживает плейсхолдер `{zone}` (например, `ns1.{zone}` → `ns1.example.com.`)
+- `ns.auto_on_missing`: если true, NS-записи автоматически создаются при создании новой зоны
+- `ns.auto_fix`: если true, отсутствующие NS-записи автоматически добавляются в существующие зоны при запуске сервера
+- `ns.ttl`: TTL для автоматически создаваемых NS-записей (по умолчанию: 86400)
 - `default_ttl`: TTL по умолчанию для записей/наборов, где TTL не указан (или равен 0). Используется в JSON/BIND импорте.
 
 ## Функции безопасности

@@ -54,6 +54,13 @@ type SOAConfig struct {
 	AutoOnMissing bool   `yaml:"auto_on_missing"` // Auto-create SOA when missing
 }
 
+type NSConfig struct {
+	Servers       []string `yaml:"servers"`         // NS server names (e.g. ["ns1.{zone}", "ns2.{zone}"])
+	AutoOnMissing bool     `yaml:"auto_on_missing"` // Auto-create NS on zone creation
+	AutoFix       bool     `yaml:"auto_fix"`        // Auto-fix missing NS on server startup
+	TTL           uint32   `yaml:"ttl"`             // TTL for NS records (default 86400)
+}
+
 type Config struct {
 	Listen           string    `yaml:"listen"`
 	Forwarder        string    `yaml:"forwarder"`
@@ -67,6 +74,7 @@ type Config struct {
 	AllowedCIDRs     []string  `yaml:"allowed_cidrs"`  // List of allowed CIDR blocks for REST API access (empty = allow all)
 	DefaultTTL       uint32    `yaml:"default_ttl"`
 	SOA              SOAConfig `yaml:"soa"`
+	NS               NSConfig  `yaml:"ns"`
 	// Deprecated: use soa.auto_on_missing instead
 	AutoSOAOnMissing bool `yaml:"auto_soa_on_missing"`
 
@@ -112,6 +120,9 @@ func Load(path string) (*Config, error) {
 	}
 	if !cfg.SOA.AutoOnMissing && cfg.AutoSOAOnMissing {
 		cfg.SOA.AutoOnMissing = true // backward compatibility for deprecated root field
+	}
+	if cfg.NS.TTL == 0 {
+		cfg.NS.TTL = 86400 // Default NS TTL: 24 hours
 	}
 
 	// Auto-disable modifications on slave servers
