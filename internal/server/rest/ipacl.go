@@ -24,14 +24,14 @@ func ipACLMiddleware(allowedCIDRs []string) gin.HandlerFunc {
 	log.Printf("IP ACL enabled with %d allowed networks", len(allowedNets))
 
 	return func(c *gin.Context) {
-		// Get client IP address
-		clientIP := c.ClientIP()
-		ip := net.ParseIP(clientIP)
+		// Use remote address to avoid trusting spoofed headers by default.
+		ip := remoteIP(c.Request.RemoteAddr)
 		if ip == nil {
-			log.Printf("IP ACL: blocked invalid IP %q from %s", clientIP, c.Request.RemoteAddr)
+			log.Printf("IP ACL: blocked invalid IP from %s", c.Request.RemoteAddr)
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied"})
 			return
 		}
+		clientIP := ip.String()
 
 		// Check if IP is in any allowed network
 		allowed := false
@@ -50,4 +50,12 @@ func ipACLMiddleware(allowedCIDRs []string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func remoteIP(remoteAddr string) net.IP {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return net.ParseIP(remoteAddr)
+	}
+	return net.ParseIP(host)
 }

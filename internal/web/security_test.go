@@ -114,12 +114,12 @@ func TestAuthMiddleware_ExpiredSessionRedirects(t *testing.T) {
 	s, r := newTestWebWithPasswordHash(t, string(hash), false)
 
 	sid := "expired"
-	s.sessions[sid] = &Session{
+	setTestSession(s, sid, &Session{
 		Username:  "admin",
 		CreatedAt: time.Now().Add(-2 * time.Hour),
 		ExpiresAt: time.Now().Add(-1 * time.Hour),
 		CSRFToken: "csrf",
-	}
+	})
 
 	req := httptest.NewRequest("GET", "/admin/", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: sid, Path: "/admin"})
@@ -132,7 +132,10 @@ func TestAuthMiddleware_ExpiredSessionRedirects(t *testing.T) {
 	if loc := w.Header().Get("Location"); loc != "/admin/login" {
 		t.Fatalf("expected redirect to /admin/login, got %q", loc)
 	}
-	if _, exists := s.sessions[sid]; exists {
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sid]
+	s.sessionsMu.RUnlock()
+	if exists {
 		t.Fatalf("expected expired session to be removed")
 	}
 }
@@ -150,12 +153,12 @@ func TestCSRFMiddleware_RejectsMissingToken(t *testing.T) {
 	})
 
 	sid := "sess"
-	s.sessions[sid] = &Session{
+	setTestSession(s, sid, &Session{
 		Username:  "admin",
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(time.Hour),
 		CSRFToken: "csrf",
-	}
+	})
 
 	req := httptest.NewRequest("POST", "/admin/secure", nil)
 	req.Host = "example.com"
@@ -182,12 +185,12 @@ func TestCSRFMiddleware_RejectsInvalidOrigin(t *testing.T) {
 	})
 
 	sid := "sess"
-	s.sessions[sid] = &Session{
+	setTestSession(s, sid, &Session{
 		Username:  "admin",
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(time.Hour),
 		CSRFToken: "csrf",
-	}
+	})
 
 	req := httptest.NewRequest("POST", "/admin/secure", nil)
 	req.Host = "example.com"
@@ -215,12 +218,12 @@ func TestCSRFMiddleware_AllowsValidOrigin(t *testing.T) {
 	})
 
 	sid := "sess"
-	s.sessions[sid] = &Session{
+	setTestSession(s, sid, &Session{
 		Username:  "admin",
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(time.Hour),
 		CSRFToken: "csrf",
-	}
+	})
 
 	req := httptest.NewRequest("POST", "/admin/secure", nil)
 	req.Host = "example.com"

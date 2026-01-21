@@ -199,10 +199,11 @@ func TestSyncExport(t *testing.T) {
 			db := setupTestDB(t)
 			tt.setupData(db)
 
-			cfg := &config.Config{}
+			cfg := &config.Config{APIToken: "testtoken"}
 			server := NewServer(cfg, db, &mockDNSServer{})
 
 			req := httptest.NewRequest("GET", "/sync/export", nil)
+			req.Header.Set("Authorization", "Bearer testtoken")
 			w := httptest.NewRecorder()
 			server.r.ServeHTTP(w, req)
 
@@ -414,7 +415,7 @@ func TestSyncImport(t *testing.T) {
 						Name:        "existing-template",
 						Description: "Updated description",
 						Records: []dbm.TemplateRecord{
-							{Name: "@", Type: "A", TTL: 600, Data: "192.168.1.1"}, // New IP
+							{Name: "@", Type: "A", TTL: 600, Data: "192.168.1.1"},   // New IP
 							{Name: "www", Type: "A", TTL: 600, Data: "192.168.1.2"}, // Additional
 						},
 					},
@@ -558,7 +559,7 @@ func TestSyncImport(t *testing.T) {
 			db := setupTestDB(t)
 			tt.setupExisting(db)
 
-			cfg := &config.Config{}
+			cfg := &config.Config{APIToken: "testtoken"}
 			server := NewServer(cfg, db, &mockDNSServer{})
 
 			var body []byte
@@ -575,6 +576,7 @@ func TestSyncImport(t *testing.T) {
 
 			req := httptest.NewRequest("POST", "/sync/import", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer testtoken")
 			w := httptest.NewRecorder()
 			server.r.ServeHTTP(w, req)
 
@@ -589,4 +591,3 @@ func TestSyncImport(t *testing.T) {
 		})
 	}
 }
-

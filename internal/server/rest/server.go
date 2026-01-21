@@ -85,8 +85,10 @@ func NewServer(cfg *config.Config, db *gorm.DB, dnsServer DNSServer) *Server {
 				authenticated = true
 			}
 		} else {
-			// No authentication configured, allow all
-			authenticated = true
+			// No authentication configured: reject all requests (secure default)
+			log.Printf("REST API authentication not configured; rejecting request")
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		if !authenticated {

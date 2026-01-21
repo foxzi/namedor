@@ -120,20 +120,20 @@ func TestAuthMiddleware(t *testing.T) {
 			description:    "Should reject request without token when plain token is configured",
 		},
 		{
-			name:           "no authentication configured - allows all",
+			name:           "no authentication configured - rejects",
 			apiToken:       "",
 			apiTokenHash:   "",
 			authHeader:     "",
-			expectedStatus: http.StatusOK,
-			description:    "Should allow request when no authentication is configured (current behavior)",
+			expectedStatus: http.StatusUnauthorized,
+			description:    "Should reject request when no authentication is configured",
 		},
 		{
-			name:           "no authentication configured with token",
+			name:           "no authentication configured with token - rejects",
 			apiToken:       "",
 			apiTokenHash:   "",
 			authHeader:     "Bearer any-token",
-			expectedStatus: http.StatusOK,
-			description:    "Should allow request with any token when no authentication is configured",
+			expectedStatus: http.StatusUnauthorized,
+			description:    "Should reject request even with token when no authentication is configured",
 		},
 		{
 			name:           "token without Bearer prefix - edge case",
@@ -187,11 +187,10 @@ func TestAuthMiddleware(t *testing.T) {
 	}
 }
 
-// TestAuthMiddleware_SecurityRecommendation tests the security recommendation:
-// When authentication is not configured, it should return an error/warning
-// instead of allowing all requests (current behavior is permissive).
+// TestAuthMiddleware_SecurityRecommendation tests that unauthenticated access is rejected
+// when no API token is configured.
 func TestAuthMiddleware_SecurityRecommendation(t *testing.T) {
-	t.Run("recommendation: reject when no auth configured", func(t *testing.T) {
+	t.Run("reject when no auth configured", func(t *testing.T) {
 		cfg := &config.Config{
 			APIToken:     "",
 			APITokenHash: "",
@@ -203,26 +202,9 @@ func TestAuthMiddleware_SecurityRecommendation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// CURRENT BEHAVIOR: Allows all (status 200)
-		if w.Code != http.StatusOK {
-			t.Errorf("Current behavior check failed: expected %d, got %d", http.StatusOK, w.Code)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("Expected %d, got %d", http.StatusUnauthorized, w.Code)
 		}
-
-		// RECOMMENDED BEHAVIOR: Should reject (status 401 or 500)
-		// This test documents the security concern that when no authentication
-		// is configured, the API should either:
-		// 1. Require explicit configuration (fail to start)
-		// 2. Log a warning and require authentication anyway
-		// 3. Have a config flag like "allow_unauthenticated: true"
-		//
-		// Current implementation allows all requests when auth is not configured,
-		// which may be a security risk in production environments.
-		t.Log("SECURITY RECOMMENDATION: When api_token and api_token_hash are both empty,")
-		t.Log("the server should either:")
-		t.Log("  1. Fail to start with an error requiring authentication configuration")
-		t.Log("  2. Reject all API requests with 401 Unauthorized")
-		t.Log("  3. Require explicit 'allow_unauthenticated: true' config option")
-		t.Log("Current behavior: Allows all requests (permissive default)")
 	})
 }
 
