@@ -98,6 +98,8 @@ log:
   sql_debug: false  # Set to true to log all SQL queries (for debugging)
 ```
 
+Note: REST API requests are rejected unless `api_token` or `api_token_hash` is configured.
+
 2) Build and run:
 - `go build ./cmd/namedot`
 - `sudo ./namedot` (DNS on :53 requires privileges or port redirect)
@@ -133,7 +135,7 @@ Examples
 
 REST API (Bearer devtoken)
 - Base URL: `http://127.0.0.1:8080`
-- Auth: header `Authorization: Bearer devtoken`
+- Auth: header `Authorization: Bearer devtoken` (required)
 
 Examples (curl)
 - Create zone
@@ -408,6 +410,7 @@ Features:
 - **Multiple Networks**: Specify multiple CIDR blocks
 - **Secure by Default**: Empty list allows all (backward compatible)
 - **Automatic Validation**: Invalid CIDRs are rejected at startup
+- **Reverse Proxy**: ACL checks the direct peer IP. If you run behind a proxy, allow the proxy IPs at the ACL or put ACL rules in the proxy/firewall.
 
 If `allowed_cidrs` is not specified or empty, all IPs are allowed (default behavior).
 
@@ -826,6 +829,7 @@ allowed_cidrs:
 - **Множественные сети**: Можно указать несколько CIDR блоков
 - **Безопасно по умолчанию**: Пустой список разрешает всем (обратная совместимость)
 - **Автоматическая валидация**: Неправильные CIDR отклоняются при запуске
+- **Reverse Proxy**: ACL проверяет прямой IP подключения. Если стоит прокси, добавьте IP прокси в ACL или настраивайте ограничения в прокси/фаерволе.
 
 Если `allowed_cidrs` не указан или пуст, доступ разрешён всем IP (поведение по умолчанию).
 

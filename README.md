@@ -29,6 +29,8 @@ make build
 ./namedot -c config.yaml
 ```
 
+Note: REST API requests are rejected unless `api_token` or `api_token_hash` is configured.
+
 ## Documentation
 
 📚 **Full documentation is available in the [docs](./docs) directory:**
