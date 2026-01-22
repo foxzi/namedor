@@ -221,7 +221,11 @@ func main() {
 	}()
 
 	go func() {
-		if err := restServer.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := restServer.Start(); err != nil {
+			// Ignore expected shutdown error
+			if err == http.ErrServerClosed || errors.Is(err, http.ErrServerClosed) {
+				return
+			}
 			log.Fatalf("rest start: %v", err)
 		}
 	}()
