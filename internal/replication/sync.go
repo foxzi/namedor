@@ -1,13 +1,13 @@
 package replication
 
 import (
-    "bytes"
     "context"
     "encoding/json"
     "fmt"
     "io"
     "log"
     "net/http"
+    "strings"
     "time"
 
     "gorm.io/gorm"
@@ -77,38 +77,144 @@ func (s *SyncClient) FetchFromMaster(ctx context.Context) (*SyncData, error) {
     return &data, nil
 }
 
-// ApplyData applies synced data to local database
+// ApplyData applies synced data to local database directly
 func (s *SyncClient) ApplyData(data *SyncData) error {
-    // Use the same import logic as syncImport endpoint
-    url := "http://" + s.cfg.RESTListen + "/sync/import"
+    return s.db.Transaction(func(tx *gorm.DB) error {
+        // Import zones
+        for _, zone := range data.Zones {
+            // Normalize zone name
+            zoneName := normalizeFQDN(zone.Name)
 
-    jsonData, err := json.Marshal(data)
-    if err != nil {
-        return fmt.Errorf("marshal data: %w", err)
+            var existingZone dbm.Zone
+            err := tx.Where("name = ?", zoneName).First(&existingZone).Error
+
+            if err == gorm.ErrRecordNotFound {
+                // Create new zone
+                newZone := dbm.Zone{Name: zoneName}
+                if err := tx.Create(&newZone).Error; err != nil {
+                    return fmt.Errorf("create zone %s: %w", zone.Name, err)
+                }
+                existingZone = newZone
+            } else if err != nil {
+                return fmt.Errorf("check zone %s: %w", zone.Name, err)
+            }
+
+            // Delete old rrsets and their records for this zone
+            var rrsetIDs []uint
+            if err := tx.Model(&dbm.RRSet{}).Where("zone_id = ?", existingZone.ID).Pluck("id", &rrsetIDs).Error; err != nil {
+                return fmt.Errorf("get rrset ids for zone %s: %w", zone.Name, err)
+            }
+            if len(rrsetIDs) > 0 {
+                if err := tx.Where("rr_set_id IN ?", rrsetIDs).Delete(&dbm.RData{}).Error; err != nil {
+                    return fmt.Errorf("delete old records for zone %s: %w", zone.Name, err)
+                }
+            }
+            if err := tx.Where("zone_id = ?", existingZone.ID).Delete(&dbm.RRSet{}).Error; err != nil {
+                return fmt.Errorf("delete old rrsets for zone %s: %w", zone.Name, err)
+            }
+
+            // Create new rrsets
+            for _, rrset := range zone.RRSets {
+                normalizedName := normalizeRRSetName(rrset.Name, zoneName)
+                newRRSet := dbm.RRSet{
+                    ZoneID:  existingZone.ID,
+                    Name:    normalizedName,
+                    Type:    strings.ToUpper(rrset.Type),
+                    TTL:     rrset.TTL,
+                    Records: rrset.Records,
+                }
+                // Clear IDs to avoid conflicts
+                for i := range newRRSet.Records {
+                    newRRSet.Records[i].ID = 0
+                }
+                if err := tx.Create(&newRRSet).Error; err != nil {
+                    return fmt.Errorf("create rrset %s/%s: %w", zone.Name, rrset.Name, err)
+                }
+            }
+        }
+
+        // Import templates
+        for _, tmpl := range data.Templates {
+            var existingTmpl dbm.Template
+            err := tx.Where("name = ?", tmpl.Name).First(&existingTmpl).Error
+
+            if err == gorm.ErrRecordNotFound {
+                newTmpl := dbm.Template{
+                    Name:        tmpl.Name,
+                    Description: tmpl.Description,
+                }
+                if err := tx.Create(&newTmpl).Error; err != nil {
+                    return fmt.Errorf("create template %s: %w", tmpl.Name, err)
+                }
+                existingTmpl = newTmpl
+            } else if err != nil {
+                return fmt.Errorf("check template %s: %w", tmpl.Name, err)
+            } else {
+                existingTmpl.Description = tmpl.Description
+                if err := tx.Save(&existingTmpl).Error; err != nil {
+                    return fmt.Errorf("update template %s: %w", tmpl.Name, err)
+                }
+            }
+
+            // Delete old template records
+            if err := tx.Where("template_id = ?", existingTmpl.ID).Delete(&dbm.TemplateRecord{}).Error; err != nil {
+                return fmt.Errorf("delete old records for template %s: %w", tmpl.Name, err)
+            }
+
+            // Create new template records
+            for _, rec := range tmpl.Records {
+                newRec := dbm.TemplateRecord{
+                    TemplateID: existingTmpl.ID,
+                    Name:       rec.Name,
+                    Type:       rec.Type,
+                    TTL:        rec.TTL,
+                    Data:       rec.Data,
+                    Country:    rec.Country,
+                    Continent:  rec.Continent,
+                    ASN:        rec.ASN,
+                    Subnet:     rec.Subnet,
+                }
+                if err := tx.Create(&newRec).Error; err != nil {
+                    return fmt.Errorf("create template record for %s: %w", tmpl.Name, err)
+                }
+            }
+        }
+
+        return nil
+    })
+}
+
+// normalizeFQDN ensures name is lowercase and ends with a dot
+func normalizeFQDN(name string) string {
+    n := strings.ToLower(strings.TrimSpace(name))
+    if n != "" && !strings.HasSuffix(n, ".") {
+        n += "."
     }
+    return n
+}
 
-    req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
-    if err != nil {
-        return fmt.Errorf("create request: %w", err)
+// normalizeRRSetName normalizes record name for zone
+func normalizeRRSetName(name, zoneName string) string {
+    n := strings.ToLower(strings.TrimSpace(name))
+    zone := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(zoneName)), ".")
+    zoneFQDN := zone + "."
+
+    if n == "" || n == "@" {
+        return zoneFQDN
     }
-
-    req.Header.Set("Content-Type", "application/json")
-    if s.cfg.APIToken != "" {
-        req.Header.Set("Authorization", "Bearer "+s.cfg.APIToken)
+    if strings.HasSuffix(n, ".@") {
+        n = strings.TrimSuffix(n, ".@")
     }
-
-    resp, err := s.client.Do(req)
-    if err != nil {
-        return fmt.Errorf("request failed: %w", err)
+    if strings.HasSuffix(n, ".") {
+        return n
     }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != http.StatusOK {
-        body, _ := io.ReadAll(resp.Body)
-        return fmt.Errorf("import failed with status %d: %s", resp.StatusCode, string(body))
+    if n == zone {
+        return zoneFQDN
     }
-
-    return nil
+    if strings.HasSuffix(n, "."+zone) {
+        return n + "."
+    }
+    return n + "." + zoneFQDN
 }
 
 // SyncOnce performs a single synchronization from master

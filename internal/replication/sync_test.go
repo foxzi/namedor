@@ -394,3 +394,239 @@ func BenchmarkFetchFromMaster(b *testing.B) {
 		client.FetchFromMaster(ctx)
 	}
 }
+
+// TestApplyData_WithoutAPIToken verifies that ApplyData works without
+// any API token configured (as on slave servers).
+// This test prevents regression where ApplyData might try to make HTTP
+// requests to itself requiring authentication.
+func TestApplyData_WithoutAPIToken(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	if err := dbm.AutoMigrate(db); err != nil {
+		t.Fatalf("Failed to migrate: %v", err)
+	}
+
+	// Config without any API token - simulates slave server setup
+	cfg := &config.Config{
+		RESTListen:   "127.0.0.1:8080",
+		APIToken:     "",           // No plain text token
+		APITokenHash: "",           // No hashed token
+		Replication: config.ReplicationConfig{
+			Mode:            "slave",
+			MasterURL:       "https://master:8443",
+			APIToken:        "master-token", // Only used for fetching from master
+			SyncIntervalSec: 60,
+		},
+	}
+
+	client := NewSyncClient(cfg, db)
+
+	// Prepare test data
+	data := &SyncData{
+		Zones: []dbm.Zone{
+			{
+				Name: "example.com",
+				RRSets: []dbm.RRSet{
+					{
+						Name: "example.com.",
+						Type: "A",
+						TTL:  300,
+						Records: []dbm.RData{
+							{Data: "1.2.3.4"},
+						},
+					},
+				},
+			},
+		},
+		Templates: []dbm.Template{
+			{
+				Name:        "basic",
+				Description: "Basic template",
+				Records: []dbm.TemplateRecord{
+					{Name: "@", Type: "A", TTL: 300, Data: "1.2.3.4"},
+				},
+			},
+		},
+	}
+
+	// ApplyData should work without making HTTP requests
+	err = client.ApplyData(data)
+	if err != nil {
+		t.Fatalf("ApplyData failed without API token: %v", err)
+	}
+
+	// Verify data was applied to database
+	var zones []dbm.Zone
+	if err := db.Preload("RRSets.Records").Find(&zones).Error; err != nil {
+		t.Fatalf("Failed to query zones: %v", err)
+	}
+
+	if len(zones) != 1 {
+		t.Fatalf("Expected 1 zone, got %d", len(zones))
+	}
+	if zones[0].Name != "example.com." {
+		t.Errorf("Expected zone name 'example.com.', got '%s'", zones[0].Name)
+	}
+	if len(zones[0].RRSets) != 1 {
+		t.Fatalf("Expected 1 rrset, got %d", len(zones[0].RRSets))
+	}
+	if len(zones[0].RRSets[0].Records) != 1 {
+		t.Fatalf("Expected 1 record, got %d", len(zones[0].RRSets[0].Records))
+	}
+
+	var templates []dbm.Template
+	if err := db.Preload("Records").Find(&templates).Error; err != nil {
+		t.Fatalf("Failed to query templates: %v", err)
+	}
+
+	if len(templates) != 1 {
+		t.Fatalf("Expected 1 template, got %d", len(templates))
+	}
+	if templates[0].Name != "basic" {
+		t.Errorf("Expected template name 'basic', got '%s'", templates[0].Name)
+	}
+}
+
+// TestApplyData_UpdatesExistingZones verifies that ApplyData correctly
+// updates existing zones instead of creating duplicates.
+func TestApplyData_UpdatesExistingZones(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	if err := dbm.AutoMigrate(db); err != nil {
+		t.Fatalf("Failed to migrate: %v", err)
+	}
+
+	cfg := &config.Config{
+		RESTListen: "127.0.0.1:8080",
+		Replication: config.ReplicationConfig{
+			Mode: "slave",
+		},
+	}
+
+	client := NewSyncClient(cfg, db)
+
+	// First sync - create zone
+	data1 := &SyncData{
+		Zones: []dbm.Zone{
+			{
+				Name: "example.com",
+				RRSets: []dbm.RRSet{
+					{Name: "example.com.", Type: "A", TTL: 300, Records: []dbm.RData{{Data: "1.1.1.1"}}},
+				},
+			},
+		},
+	}
+
+	if err := client.ApplyData(data1); err != nil {
+		t.Fatalf("First ApplyData failed: %v", err)
+	}
+
+	// Second sync - update zone with different records
+	data2 := &SyncData{
+		Zones: []dbm.Zone{
+			{
+				Name: "example.com",
+				RRSets: []dbm.RRSet{
+					{Name: "example.com.", Type: "A", TTL: 600, Records: []dbm.RData{{Data: "2.2.2.2"}}},
+					{Name: "www.example.com.", Type: "A", TTL: 300, Records: []dbm.RData{{Data: "3.3.3.3"}}},
+				},
+			},
+		},
+	}
+
+	if err := client.ApplyData(data2); err != nil {
+		t.Fatalf("Second ApplyData failed: %v", err)
+	}
+
+	// Verify only one zone exists (not duplicated)
+	var zones []dbm.Zone
+	if err := db.Find(&zones).Error; err != nil {
+		t.Fatalf("Failed to query zones: %v", err)
+	}
+	if len(zones) != 1 {
+		t.Fatalf("Expected 1 zone after update, got %d (zone was duplicated)", len(zones))
+	}
+
+	// Verify records were updated
+	var rrsets []dbm.RRSet
+	if err := db.Preload("Records").Where("zone_id = ?", zones[0].ID).Find(&rrsets).Error; err != nil {
+		t.Fatalf("Failed to query rrsets: %v", err)
+	}
+	if len(rrsets) != 2 {
+		t.Errorf("Expected 2 rrsets after update, got %d", len(rrsets))
+	}
+}
+
+// TestApplyData_MultipleZones verifies that ApplyData handles multiple zones.
+func TestApplyData_MultipleZones(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	if err := dbm.AutoMigrate(db); err != nil {
+		t.Fatalf("Failed to migrate: %v", err)
+	}
+
+	cfg := &config.Config{
+		RESTListen: "127.0.0.1:8080",
+		Replication: config.ReplicationConfig{
+			Mode: "slave",
+		},
+	}
+
+	client := NewSyncClient(cfg, db)
+
+	data := &SyncData{
+		Zones: []dbm.Zone{
+			{Name: "example.com", RRSets: []dbm.RRSet{{Name: "@", Type: "A", TTL: 300, Records: []dbm.RData{{Data: "1.1.1.1"}}}}},
+			{Name: "example.org", RRSets: []dbm.RRSet{{Name: "@", Type: "A", TTL: 300, Records: []dbm.RData{{Data: "2.2.2.2"}}}}},
+			{Name: "example.net", RRSets: []dbm.RRSet{{Name: "@", Type: "A", TTL: 300, Records: []dbm.RData{{Data: "3.3.3.3"}}}}},
+		},
+	}
+
+	if err := client.ApplyData(data); err != nil {
+		t.Fatalf("ApplyData failed: %v", err)
+	}
+
+	var count int64
+	if err := db.Model(&dbm.Zone{}).Count(&count).Error; err != nil {
+		t.Fatalf("Failed to count zones: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("Expected 3 zones, got %d", count)
+	}
+}
+
+// TestApplyData_EmptyData verifies that ApplyData handles empty data.
+func TestApplyData_EmptyData(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	if err := dbm.AutoMigrate(db); err != nil {
+		t.Fatalf("Failed to migrate: %v", err)
+	}
+
+	cfg := &config.Config{
+		RESTListen: "127.0.0.1:8080",
+		Replication: config.ReplicationConfig{
+			Mode: "slave",
+		},
+	}
+
+	client := NewSyncClient(cfg, db)
+
+	data := &SyncData{
+		Zones:     []dbm.Zone{},
+		Templates: []dbm.Template{},
+	}
+
+	err = client.ApplyData(data)
+	if err != nil {
+		t.Fatalf("ApplyData failed on empty data: %v", err)
+	}
+}
