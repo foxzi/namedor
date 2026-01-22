@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -219,7 +221,7 @@ func main() {
 	}()
 
 	go func() {
-		if err := restServer.Start(); err != nil {
+		if err := restServer.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("rest start: %v", err)
 		}
 	}()
