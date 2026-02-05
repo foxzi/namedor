@@ -522,6 +522,10 @@ func (s *Server) importZone(c *gin.Context) {
 			return
 		}
 		dbm.BumpSOASerialAuto(s.db, z, s.cfg.SOA.AutoOnMissing, s.cfg.SOA.Primary, s.cfg.SOA.Hostmaster)
+		// Ensure NS records exist after import (they might be missing from imported data)
+		if s.cfg.NS.AutoOnMissing {
+			dbm.EnsureDefaultNS(s.db, z, s.cfg.NS.Servers, s.cfg.NS.TTL)
+		}
 		// Invalidate DNS cache after zone import
 		if s.dnsServer != nil {
 			s.dnsServer.InvalidateZoneCache()
@@ -533,6 +537,10 @@ func (s *Server) importZone(c *gin.Context) {
 			return
 		}
 		dbm.BumpSOASerialAuto(s.db, z, s.cfg.SOA.AutoOnMissing, s.cfg.SOA.Primary, s.cfg.SOA.Hostmaster)
+		// Ensure NS records exist after import (they might be missing from imported data)
+		if s.cfg.NS.AutoOnMissing {
+			dbm.EnsureDefaultNS(s.db, z, s.cfg.NS.Servers, s.cfg.NS.TTL)
+		}
 		// Invalidate DNS cache after zone import
 		if s.dnsServer != nil {
 			s.dnsServer.InvalidateZoneCache()

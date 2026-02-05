@@ -3,6 +3,7 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -489,6 +490,143 @@ func TestImportZone_NonExistentZone(t *testing.T) {
 	}
 	if response["error"] != "zone not found" {
 		t.Errorf("Expected error 'zone not found', got '%v'", response["error"])
+	}
+}
+
+func TestImportZone_RestoresNSRecords(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Setup database
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+
+	if err := dbm.AutoMigrate(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	// Setup server with NS auto-creation enabled
+	cfg := &config.Config{
+		APIToken:   "testtoken",
+		DefaultTTL: 3600,
+		SOA: config.SOAConfig{
+			Primary:       "ns1.{zone}",
+			Hostmaster:    "hostmaster.{zone}",
+			AutoOnMissing: true,
+		},
+		NS: config.NSConfig{
+			Servers:       []string{"ns1.{zone}", "ns2.{zone}"},
+			AutoOnMissing: true,
+			TTL:           86400,
+		},
+	}
+	mockDNS := &mockDNSServer{}
+	server := NewServer(cfg, db, mockDNS)
+
+	r := gin.New()
+	// Simple auth middleware for testing
+	auth := func(c *gin.Context) {
+		token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+		if token != cfg.APIToken {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	}
+	r.Use(auth)
+	r.POST("/zones", server.createZone)
+	r.POST("/zones/:id/import", server.importZone)
+
+	// Step 1: Create zone (NS records should be created automatically)
+	createPayload := `{"name":"example.org"}`
+	req := httptest.NewRequest("POST", "/zones", bytes.NewBufferString(createPayload))
+	req.Header.Set("Authorization", "Bearer testtoken")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected status %d for zone creation, got %d", http.StatusCreated, w.Code)
+	}
+
+	var zone Zone
+	if err := json.Unmarshal(w.Body.Bytes(), &zone); err != nil {
+		t.Fatalf("Failed to parse zone response: %v", err)
+	}
+
+	// Step 2: Verify NS records exist
+	var nsCount int64
+	db.Model(&RRSet{}).Where("zone_id = ? AND type = ?", zone.ID, "NS").Count(&nsCount)
+	if nsCount != 1 {
+		t.Errorf("Expected 1 NS RRSet after zone creation, got %d", nsCount)
+	}
+
+	// Step 3: Import zone data with mode=replace WITHOUT NS records
+	importPayload := `{
+		"name": "example.org",
+		"rrsets": [
+			{
+				"name": "example.org.",
+				"type": "A",
+				"ttl": 300,
+				"records": [{"data": "192.0.2.1"}]
+			},
+			{
+				"name": "www.example.org.",
+				"type": "A",
+				"ttl": 300,
+				"records": [{"data": "192.0.2.2"}]
+			}
+		]
+	}`
+	req2 := httptest.NewRequest("POST", "/zones/"+fmt.Sprint(zone.ID)+"/import?format=json&mode=replace", bytes.NewBufferString(importPayload))
+	req2.Header.Set("Authorization", "Bearer testtoken")
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusNoContent {
+		t.Fatalf("Expected status %d for import, got %d", http.StatusNoContent, w2.Code)
+	}
+
+	// Step 4: Verify NS records were restored automatically
+	var nsCount2 int64
+	db.Model(&RRSet{}).Where("zone_id = ? AND type = ?", zone.ID, "NS").Count(&nsCount2)
+	if nsCount2 != 1 {
+		t.Errorf("Expected 1 NS RRSet after import, got %d", nsCount2)
+	}
+
+	// Step 5: Verify NS records contain correct data
+	var nsRRSet RRSet
+	if err := db.Preload("Records").Where("zone_id = ? AND type = ?", zone.ID, "NS").First(&nsRRSet).Error; err != nil {
+		t.Fatalf("Failed to load NS RRSet: %v", err)
+	}
+
+	if len(nsRRSet.Records) != 2 {
+		t.Errorf("Expected 2 NS records, got %d", len(nsRRSet.Records))
+	}
+
+	expectedNS := map[string]bool{
+		"ns1.example.org.": false,
+		"ns2.example.org.": false,
+	}
+	for _, record := range nsRRSet.Records {
+		if _, exists := expectedNS[record.Data]; exists {
+			expectedNS[record.Data] = true
+		}
+	}
+	for ns, found := range expectedNS {
+		if !found {
+			t.Errorf("Expected NS record %s not found", ns)
+		}
+	}
+
+	// Step 6: Verify imported A records exist
+	var aCount int64
+	db.Model(&RRSet{}).Where("zone_id = ? AND type = ?", zone.ID, "A").Count(&aCount)
+	if aCount != 2 {
+		t.Errorf("Expected 2 A RRSets after import, got %d", aCount)
 	}
 }
 
