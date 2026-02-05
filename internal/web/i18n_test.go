@@ -105,6 +105,7 @@ func TestZonesList_LocalizedEmptyStateRU(t *testing.T) {
 	setTestSession(s, sid, &Session{Username: "admin", CreatedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)})
 
 	req := httptest.NewRequest("GET", "/admin/zones", nil)
+	req.Header.Set("HX-Request", "true")
 	req.AddCookie(&http.Cookie{Name: "session", Value: sid, Path: "/admin"})
 	req.AddCookie(&http.Cookie{Name: "lang", Value: "ru", Path: "/"})
 	w := httptest.NewRecorder()

@@ -150,7 +150,7 @@
                             {{ t .Lang "+ New Zone" }}
                         </button>
                     </div>
-                    <div id="zones-list" hx-get="/admin/zones" hx-trigger="load" hx-swap="innerHTML">
+                    <div id="zones-list">
                         {{ t .Lang "Loading..." }}
                     </div>
                 </div>
@@ -162,7 +162,7 @@
                             {{ t .Lang "+ New Template" }}
                         </button>
                     </div>
-                    <div id="templates-content" hx-get="/admin/templates" hx-trigger="load" hx-swap="innerHTML">
+                    <div id="templates-content">
                         {{ t .Lang "Loading..." }}
                     </div>
                 </div>
@@ -184,16 +184,66 @@
             evt.detail.headers['X-CSRF-Token'] = csrfToken;
         });
 
-        function showTab(tab) {
-            // Hide all tabs
+        // Restore last state on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            var lastPath = '{{.LastPath}}';
+
+            if (lastPath) {
+                // Determine which tab to show based on path
+                if (lastPath.startsWith('/admin/templates')) {
+                    showTabSilent('templates');
+                    var templatesContent = document.getElementById('templates-content');
+                    if (lastPath !== '/admin/templates') {
+                        htmx.ajax('GET', lastPath, {target: '#templates-content', swap: 'innerHTML'});
+                    } else {
+                        htmx.ajax('GET', '/admin/templates', {target: '#templates-content', swap: 'innerHTML'});
+                    }
+                } else if (lastPath.startsWith('/admin/logs')) {
+                    showTabSilent('logs');
+                } else if (lastPath.startsWith('/admin/zones')) {
+                    // Load either specific view or zones list
+                    var zonesListElement = document.getElementById('zones-list');
+                    if (zonesListElement) {
+                        htmx.ajax('GET', lastPath, {target: '#zones-list', swap: 'innerHTML'});
+                    }
+                } else {
+                    // Default: load zones list
+                    htmx.ajax('GET', '/admin/zones', {target: '#zones-list', swap: 'innerHTML'});
+                }
+            } else {
+                // No saved state: load default zones list
+                htmx.ajax('GET', '/admin/zones', {target: '#zones-list', swap: 'innerHTML'});
+            }
+        });
+
+        // Show tab without triggering onclick events
+        function showTabSilent(tab) {
             document.getElementById('zones-tab').style.display = 'none';
             document.getElementById('templates-tab').style.display = 'none';
             document.getElementById('logs-tab').style.display = 'none';
 
-            // Remove active class from all buttons
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
 
-            // Show selected tab
+            document.getElementById(tab + '-tab').style.display = 'block';
+
+            var buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(function(btn) {
+                var btnText = btn.textContent.toLowerCase();
+                if ((tab === 'zones' && btnText.includes('zones')) ||
+                    (tab === 'templates' && btnText.includes('templates')) ||
+                    (tab === 'logs' && btnText.includes('logs'))) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function showTab(tab) {
+            document.getElementById('zones-tab').style.display = 'none';
+            document.getElementById('templates-tab').style.display = 'none';
+            document.getElementById('logs-tab').style.display = 'none';
+
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
             document.getElementById(tab + '-tab').style.display = 'block';
             event.target.classList.add('active');
         }

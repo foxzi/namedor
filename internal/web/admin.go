@@ -33,6 +33,7 @@ type Session struct {
 	CreatedAt time.Time
 	ExpiresAt time.Time
 	CSRFToken string
+	LastPath  string
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) (*Server, error) {
@@ -70,6 +71,7 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	// Protected routes
 	admin := r.Group("/admin")
 	admin.Use(s.authMiddleware())
+	admin.Use(s.htmxRedirectMiddleware())
 	{
 		admin.GET("/", s.dashboard)
 		admin.GET("/logout", s.logout)
@@ -104,6 +106,33 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	}
 }
 
+// htmxRedirectMiddleware renders dashboard for non-HTMX requests to fragment endpoints
+func (s *Server) htmxRedirectMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		// If this is a fragment endpoint (not /admin root) and not an HTMX request
+		if path != "/admin" && path != "/admin/" && c.GetHeader("HX-Request") == "" {
+			// Save the path to session so dashboard can restore it
+			if sessionID, exists := c.Get("session_id"); exists {
+				s.sessionsMu.Lock()
+				if session, ok := s.sessions[sessionID.(string)]; ok {
+					fullPath := path
+					if c.Request.URL.RawQuery != "" {
+						fullPath += "?" + c.Request.URL.RawQuery
+					}
+					session.LastPath = fullPath
+				}
+				s.sessionsMu.Unlock()
+			}
+			// Render dashboard instead of redirecting (to keep URL intact)
+			s.dashboard(c)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 // authMiddleware checks for valid session
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -128,6 +157,20 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 
 		c.Set("username", session.Username)
 		c.Set("csrf_token", session.CSRFToken)
+		c.Set("session_id", cookie)
+
+		// Save last visited path in session (except for login/logout/dashboard)
+		// Don't save /admin path as it's the restore point, not a real navigation
+		path := c.Request.URL.Path
+		if path != "/admin" && path != "/admin/" && path != "/admin/login" && path != "/admin/logout" && !strings.HasPrefix(path, "/admin/lang/") {
+			s.sessionsMu.Lock()
+			session.LastPath = path
+			if c.Request.URL.RawQuery != "" {
+				session.LastPath += "?" + c.Request.URL.RawQuery
+			}
+			s.sessionsMu.Unlock()
+		}
+
 		c.Next()
 	}
 }
@@ -186,11 +229,23 @@ func (s *Server) logout(c *gin.Context) {
 func (s *Server) dashboard(c *gin.Context) {
 	username, _ := c.Get("username")
 	csrfToken, _ := c.Get("csrf_token")
+	sessionID, _ := c.Get("session_id")
+
+	lastPath := "/admin/zones"
+	if sessionID != nil {
+		s.sessionsMu.RLock()
+		if session, exists := s.sessions[sessionID.(string)]; exists && session.LastPath != "" && session.LastPath != "/admin" && session.LastPath != "/admin/" {
+			lastPath = session.LastPath
+		}
+		s.sessionsMu.RUnlock()
+	}
+
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	s.tmpl.ExecuteTemplate(c.Writer, "dashboard.html", gin.H{
 		"Username":  username,
 		"Lang":      s.getLang(c),
 		"CSRFToken": csrfToken,
+		"LastPath":  lastPath,
 	})
 }
 

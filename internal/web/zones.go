@@ -118,7 +118,7 @@ func (s *Server) listZones(c *gin.Context) {
                 <td><strong>%s</strong></td>
                 <td>%d `+s.tr(c, "Records")+`</td>
                 <td class="actions">
-                    <button class="btn btn-sm" hx-get="/admin/zones/%d/records" hx-target="#zones-list" hx-swap="innerHTML">
+                    <button class="btn btn-sm" hx-get="/admin/zones/%d/records" hx-target="#zones-list" hx-swap="innerHTML" hx-push-url="true">
                         %s
                     </button>
                     <button class="btn btn-sm btn-danger"

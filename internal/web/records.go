@@ -106,7 +106,7 @@ func (s *Server) listRecords(c *gin.Context) {
 
 	html := fmt.Sprintf(`
 	<div style="margin-bottom: 1rem;">
-		<button class="btn" style="background: #718096;" hx-get="/admin/zones" hx-target="#zones-list" hx-swap="innerHTML">
+		<button class="btn" style="background: #718096;" hx-get="/admin/zones" hx-target="#zones-list" hx-swap="innerHTML" hx-push-url="true">
 			%s
 		</button>
 		<h2 style="margin-top: 1rem;">%s</h2>
