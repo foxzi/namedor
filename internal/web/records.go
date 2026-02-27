@@ -168,7 +168,7 @@ func (s *Server) listRecords(c *gin.Context) {
 						%s
 					</button>
 				</td>
-				</tr>`, rr.Name, rr.Type, rr.TTL, geoInfo, record.Data, record.ID, s.tr(c, "Edit"), record.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
+				</tr>`, he(rr.Name), he(rr.Type), rr.TTL, he(geoInfo), he(record.Data), record.ID, s.tr(c, "Edit"), record.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
 			}
 		}
 
@@ -372,7 +372,7 @@ func (s *Server) createRecord(c *gin.Context) {
 			TTL:    uint32(ttl),
 		}
 		if err := s.db.Create(&rrset).Error; err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record set: %s"), err.Error()))
+			c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record set: %s"), he(err.Error())))
 			return
 		}
 	}
@@ -391,7 +391,7 @@ func (s *Server) createRecord(c *gin.Context) {
 	}
 
 	if err := s.db.Create(&record).Error; err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record: %s"), err.Error()))
+		c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record: %s"), he(err.Error())))
 		return
 	}
 

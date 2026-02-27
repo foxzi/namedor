@@ -12,12 +12,12 @@ import (
 
 func (s *Server) listTemplates(c *gin.Context) {
 	var templates []db.Template
-    if err := s.db.Preload("Records").Find(&templates).Error; err != nil {
-        c.String(http.StatusInternalServerError, s.tr(c, "Error loading templates"))
-        return
-    }
+	if err := s.db.Preload("Records").Find(&templates).Error; err != nil {
+		c.String(http.StatusInternalServerError, s.tr(c, "Error loading templates"))
+		return
+	}
 
-    html := `<table>
+	html := `<table>
         <thead>
             <tr>
                 <th>` + s.tr(c, "Template Name") + `</th>
@@ -28,11 +28,11 @@ func (s *Server) listTemplates(c *gin.Context) {
         </thead>
         <tbody>`
 
-    if len(templates) == 0 {
-        html += `<tr><td colspan="4" class="empty-state">` + s.tr(c, "No templates found. Create your first template!") + `</td></tr>`
-    } else {
-        for _, tpl := range templates {
-            html += fmt.Sprintf(`
+	if len(templates) == 0 {
+		html += `<tr><td colspan="4" class="empty-state">` + s.tr(c, "No templates found. Create your first template!") + `</td></tr>`
+	} else {
+		for _, tpl := range templates {
+			html += fmt.Sprintf(`
             <tr>
                 <td><strong>%s</strong></td>
                 <td>%s</td>
@@ -52,9 +52,9 @@ func (s *Server) listTemplates(c *gin.Context) {
                         %s
                     </button>
                 </td>
-            </tr>`, tpl.Name, tpl.Description, len(tpl.Records), tpl.ID, s.tr(c, "View"), tpl.ID, s.tr(c, "Edit"), tpl.ID, s.trf(c, "Delete template '%s'?", tpl.Name), s.tr(c, "Delete"))
-        }
-    }
+            </tr>`, he(tpl.Name), he(tpl.Description), len(tpl.Records), tpl.ID, s.tr(c, "View"), tpl.ID, s.tr(c, "Edit"), tpl.ID, he(s.trf(c, "Delete template '%s'?", tpl.Name)), s.tr(c, "Delete"))
+		}
+	}
 
 	html += `</tbody></table>`
 	c.Header("Content-Type", "text/html; charset=utf-8")
@@ -62,7 +62,7 @@ func (s *Server) listTemplates(c *gin.Context) {
 }
 
 func (s *Server) newTemplateForm(c *gin.Context) {
-    html := `
+	html := `
     <div style="background: #f7fafc; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
         <h3>` + s.tr(c, "Create New Template") + `</h3>
         <form hx-post="/admin/templates" hx-target="#templates-content" hx-swap="innerHTML" style="margin-top: 1rem;">
@@ -97,20 +97,20 @@ func (s *Server) createTemplate(c *gin.Context) {
 	name := c.PostForm("name")
 	description := c.PostForm("description")
 
-    if name == "" {
-        c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Template name is required")+`</div>`)
-        return
-    }
+	if name == "" {
+		c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Template name is required")+`</div>`)
+		return
+	}
 
 	template := db.Template{
 		Name:        name,
 		Description: description,
 	}
 
-    if err := s.db.Create(&template).Error; err != nil {
-        c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error creating template: %s")+`</div>`, err.Error()))
-        return
-    }
+	if err := s.db.Create(&template).Error; err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error creating template: %s")+`</div>`, he(err.Error())))
+		return
+	}
 
 	// Redirect to edit to add records
 	c.Header("HX-Redirect", fmt.Sprintf("/admin/templates/%d/edit", template.ID))
@@ -118,19 +118,19 @@ func (s *Server) createTemplate(c *gin.Context) {
 }
 
 func (s *Server) viewTemplate(c *gin.Context) {
-    id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-    if err != nil {
-        c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
+		return
+	}
 
 	var template db.Template
-    if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
-        return
-    }
+	if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+		return
+	}
 
-    html := fmt.Sprintf(`
+	html := fmt.Sprintf(`
     <div style="margin-bottom: 1rem;">
         <button class="btn" style="background: #718096;" hx-get="/admin/templates" hx-target="#templates-content" hx-swap="innerHTML">
             %s
@@ -143,7 +143,7 @@ func (s *Server) viewTemplate(c *gin.Context) {
         <h3 style="margin-bottom: 1rem;">%s</h3>`, s.tr(c, "← Back to Templates"), template.Name, template.Description, s.tr(c, "Template Records"))
 
 	if len(template.Records) == 0 {
-        html += `<p style="color: #718096;">` + s.tr(c, "No records in this template.") + `</p>`
+		html += `<p style="color: #718096;">` + s.tr(c, "No records in this template.") + `</p>`
 	} else {
 		html += `<table style="margin-top: 1rem;">
 			<thead>
@@ -159,10 +159,10 @@ func (s *Server) viewTemplate(c *gin.Context) {
 
 		for _, rec := range template.Records {
 			geoInfo := "Default"
-            if rec.Country != nil && *rec.Country != "" {
-                geoInfo = s.trf(c, "Country: %s", *rec.Country)
-            } else if rec.Continent != nil && *rec.Continent != "" {
-                geoInfo = s.trf(c, "Continent: %s", *rec.Continent)
+			if rec.Country != nil && *rec.Country != "" {
+				geoInfo = s.trf(c, "Country: %s", *rec.Country)
+			} else if rec.Continent != nil && *rec.Continent != "" {
+				geoInfo = s.trf(c, "Continent: %s", *rec.Continent)
 			} else if rec.ASN != nil && *rec.ASN != 0 {
 				geoInfo = fmt.Sprintf("ASN: %d", *rec.ASN)
 			} else if rec.Subnet != nil && *rec.Subnet != "" {
@@ -176,7 +176,7 @@ func (s *Server) viewTemplate(c *gin.Context) {
 					<td>%d</td>
 					<td><code>%s</code></td>
 					<td><em>%s</em></td>
-				</tr>`, rec.Name, rec.Type, rec.TTL, rec.Data, geoInfo)
+				</tr>`, he(rec.Name), he(rec.Type), rec.TTL, he(rec.Data), he(geoInfo))
 		}
 
 		html += `</tbody></table>`
@@ -188,19 +188,19 @@ func (s *Server) viewTemplate(c *gin.Context) {
 }
 
 func (s *Server) editTemplateForm(c *gin.Context) {
-    id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-    if err != nil {
-        c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
+		return
+	}
 
-    var template db.Template
-    if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
-        return
-    }
+	var template db.Template
+	if err := s.db.Preload("Records").First(&template, id).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+		return
+	}
 
-    html := fmt.Sprintf(`
+	html := fmt.Sprintf(`
     <!-- Help Banner -->
     <div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <div style="display: flex; align-items: center; gap: 1rem;">
@@ -247,18 +247,18 @@ func (s *Server) editTemplateForm(c *gin.Context) {
             </button>
         </div>
         <div id="template-records">`,
-        s.tr(c, "Template Placeholders Guide"),
-        s.tr(c, "Use"),
-        s.tr(c, "in Name and Data fields - it will be replaced with the actual domain when applying the template"),
-        s.trf(c, "Edit Template: %s", template.Name), id,
-        s.tr(c, "Template Name"), template.Name,
-        s.tr(c, "Description"), template.Description,
-        s.tr(c, "Update Template"), s.tr(c, "Cancel"),
-        s.tr(c, "Template Records"), id, s.tr(c, "+ Add Record"))
+		s.tr(c, "Template Placeholders Guide"),
+		s.tr(c, "Use"),
+		s.tr(c, "in Name and Data fields - it will be replaced with the actual domain when applying the template"),
+		s.trf(c, "Edit Template: %s", template.Name), id,
+		s.tr(c, "Template Name"), template.Name,
+		s.tr(c, "Description"), template.Description,
+		s.tr(c, "Update Template"), s.tr(c, "Cancel"),
+		s.tr(c, "Template Records"), id, s.tr(c, "+ Add Record"))
 
-    if len(template.Records) == 0 {
-        html += `<p style="color: #718096;">` + s.tr(c, "No records yet. Add records to this template.") + `</p>`
-    } else {
+	if len(template.Records) == 0 {
+		html += `<p style="color: #718096;">` + s.tr(c, "No records yet. Add records to this template.") + `</p>`
+	} else {
 		html += `<table>
 			<thead>
 				<tr>
@@ -274,15 +274,15 @@ func (s *Server) editTemplateForm(c *gin.Context) {
 
 		for _, rec := range template.Records {
 			geoInfo := "Default"
-            if rec.Country != nil && *rec.Country != "" {
-                geoInfo = s.trf(c, "Country: %s", *rec.Country)
-            } else if rec.Continent != nil && *rec.Continent != "" {
-                geoInfo = s.trf(c, "Continent: %s", *rec.Continent)
-            } else if rec.ASN != nil && *rec.ASN != 0 {
-                geoInfo = s.trf(c, "ASN: %d", *rec.ASN)
-            } else if rec.Subnet != nil && *rec.Subnet != "" {
-                geoInfo = s.trf(c, "Subnet: %s", *rec.Subnet)
-            }
+			if rec.Country != nil && *rec.Country != "" {
+				geoInfo = s.trf(c, "Country: %s", *rec.Country)
+			} else if rec.Continent != nil && *rec.Continent != "" {
+				geoInfo = s.trf(c, "Continent: %s", *rec.Continent)
+			} else if rec.ASN != nil && *rec.ASN != 0 {
+				geoInfo = s.trf(c, "ASN: %d", *rec.ASN)
+			} else if rec.Subnet != nil && *rec.Subnet != "" {
+				geoInfo = s.trf(c, "Subnet: %s", *rec.Subnet)
+			}
 
 			html += fmt.Sprintf(`
 				<tr>
@@ -300,7 +300,7 @@ func (s *Server) editTemplateForm(c *gin.Context) {
                         %s
                     </button>
                 </td>
-            </tr>`, rec.Name, rec.Type, rec.TTL, rec.Data, geoInfo, rec.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
+            </tr>`, he(rec.Name), he(rec.Type), rec.TTL, he(rec.Data), he(geoInfo), rec.ID, s.tr(c, "Delete this record?"), s.tr(c, "Delete"))
 		}
 
 		html += `</tbody></table>`
@@ -319,10 +319,10 @@ func (s *Server) updateTemplate(c *gin.Context) {
 	}
 
 	var template db.Template
-    if err := s.db.First(&template, id).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
-        return
-    }
+	if err := s.db.First(&template, id).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+		return
+	}
 
 	name := c.PostForm("name")
 	description := c.PostForm("description")
@@ -335,25 +335,25 @@ func (s *Server) updateTemplate(c *gin.Context) {
 	template.Name = name
 	template.Description = description
 
-    if err := s.db.Save(&template).Error; err != nil {
-        c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error updating template: %s")+`</div>`, err.Error()))
-        return
-    }
+	if err := s.db.Save(&template).Error; err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error updating template: %s")+`</div>`, he(err.Error())))
+		return
+	}
 
 	s.editTemplateForm(c)
 }
 
 func (s *Server) deleteTemplate(c *gin.Context) {
-    id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-    if err != nil {
-        c.Status(http.StatusBadRequest)
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
 
-    if err := s.db.Delete(&db.Template{}, id).Error; err != nil {
-        c.String(http.StatusInternalServerError, s.tr(c, "Error deleting template"))
-        return
-    }
+	if err := s.db.Delete(&db.Template{}, id).Error; err != nil {
+		c.String(http.StatusInternalServerError, s.tr(c, "Error deleting template"))
+		return
+	}
 
 	c.Status(http.StatusOK)
 }
@@ -361,7 +361,7 @@ func (s *Server) deleteTemplate(c *gin.Context) {
 func (s *Server) newTemplateRecordForm(c *gin.Context) {
 	templateID := c.Param("id")
 
-html := fmt.Sprintf(`
+	html := fmt.Sprintf(`
     <div style="background: #edf2f7; padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;">
         <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
             <!-- Left side: Form -->
@@ -486,33 +486,33 @@ html := fmt.Sprintf(`
             </div>
         </div>
     </div>`,
-    s.tr(c, "Add Template Record"),
-    templateID,
-    s.tr(c, "DNS Record"),
-    s.tr(c, "Name"),
-    s.tr(c, "Data"),
-    s.tr(c, "GeoIP Targeting (optional)"),
-    s.tr(c, "Country Code"),
-    s.tr(c, "Continent Code"),
-    s.tr(c, "Add Record"),
-    templateID,
-    s.tr(c, "Cancel"),
-    s.tr(c, "Help"),
-    s.tr(c, "Placeholders"),
-    s.tr(c, "Example"),
-    s.tr(c, "Applied to"),
-    s.tr(c, "record"))
+		s.tr(c, "Add Template Record"),
+		templateID,
+		s.tr(c, "DNS Record"),
+		s.tr(c, "Name"),
+		s.tr(c, "Data"),
+		s.tr(c, "GeoIP Targeting (optional)"),
+		s.tr(c, "Country Code"),
+		s.tr(c, "Continent Code"),
+		s.tr(c, "Add Record"),
+		templateID,
+		s.tr(c, "Cancel"),
+		s.tr(c, "Help"),
+		s.tr(c, "Placeholders"),
+		s.tr(c, "Example"),
+		s.tr(c, "Applied to"),
+		s.tr(c, "record"))
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, html)
 }
 
 func (s *Server) createTemplateRecord(c *gin.Context) {
-    templateID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-    if err != nil {
-        c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
-        return
-    }
+	templateID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
+		return
+	}
 
 	name := c.PostForm("name")
 	recType := c.PostForm("type")
@@ -523,10 +523,10 @@ func (s *Server) createTemplateRecord(c *gin.Context) {
 	asnStr := c.PostForm("asn")
 	subnet := c.PostForm("subnet")
 
-    if name == "" || recType == "" || data == "" {
-        c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Name, type, and data are required")+`</div>`)
-        return
-    }
+	if name == "" || recType == "" || data == "" {
+		c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Name, type, and data are required")+`</div>`)
+		return
+	}
 
 	ttl, _ := strconv.Atoi(ttlStr)
 	if ttl <= 0 {
@@ -550,10 +550,10 @@ func (s *Server) createTemplateRecord(c *gin.Context) {
 		Subnet:     stringPtr(subnet),
 	}
 
-    if err := s.db.Create(&record).Error; err != nil {
-        c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record: %s"), err.Error()))
-        return
-    }
+	if err := s.db.Create(&record).Error; err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error creating record: %s"), he(err.Error())))
+		return
+	}
 
 	// Return to edit form
 	c.Params = append(c.Params, gin.Param{Key: "id", Value: fmt.Sprintf("%d", templateID)})
@@ -567,10 +567,10 @@ func (s *Server) deleteTemplateRecord(c *gin.Context) {
 		return
 	}
 
-    if err := s.db.Delete(&db.TemplateRecord{}, id).Error; err != nil {
-        c.String(http.StatusInternalServerError, s.tr(c, "Error deleting record"))
-        return
-    }
+	if err := s.db.Delete(&db.TemplateRecord{}, id).Error; err != nil {
+		c.String(http.StatusInternalServerError, s.tr(c, "Error deleting record"))
+		return
+	}
 
 	c.Status(http.StatusOK)
 }
@@ -582,22 +582,22 @@ func (s *Server) applyTemplateForm(c *gin.Context) {
 
 	var template db.Template
 	tid, _ := strconv.ParseUint(templateID, 10, 32)
-    if err := s.db.Preload("Records").First(&template, tid).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
-        return
-    }
+	if err := s.db.Preload("Records").First(&template, tid).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+		return
+	}
 
 	var zone db.Zone
 	zid, _ := strconv.ParseUint(zoneID, 10, 32)
-    if err := s.db.First(&zone, zid).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
-        return
-    }
+	if err := s.db.First(&zone, zid).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
+		return
+	}
 
 	// Extract domain from zone name (remove trailing dot)
 	domain := strings.TrimSuffix(zone.Name, ".")
 
-html := fmt.Sprintf(`
+	html := fmt.Sprintf(`
     <div style="background: #f7fafc; padding: 1.5rem; border-radius: 4px;">
         <h3>%s</h3>
         <p style="color: #718096; margin-bottom: 1rem;">%s</p>
@@ -611,14 +611,14 @@ html := fmt.Sprintf(`
                 <tbody>`, s.trf(c, "Apply Template: %s", template.Name), s.trf(c, "Zone: %s", zone.Name), s.trf(c, "This will create %d records:", len(template.Records)), s.tr(c, "Name"), s.tr(c, "Type"), s.tr(c, "TTL"), s.tr(c, "Data"))
 
 	for _, rec := range template.Records {
-        // Preview with placeholders replaced
-        previewName := strings.ReplaceAll(rec.Name, "{domain}", domain)
-        if previewName == "@" {
-            previewName = zone.Name
-        } else if !strings.HasSuffix(previewName, ".") {
-            previewName = previewName + "."
-        }
-        previewData := strings.ReplaceAll(rec.Data, "{domain}", domain)
+		// Preview with placeholders replaced
+		previewName := strings.ReplaceAll(rec.Name, "{domain}", domain)
+		if previewName == "@" {
+			previewName = zone.Name
+		} else if !strings.HasSuffix(previewName, ".") {
+			previewName = previewName + "."
+		}
+		previewData := strings.ReplaceAll(rec.Data, "{domain}", domain)
 
 		html += fmt.Sprintf(`
 			<tr>
@@ -626,10 +626,10 @@ html := fmt.Sprintf(`
 				<td>%s</td>
 				<td>%d</td>
 				<td><code>%s</code></td>
-			</tr>`, previewName, rec.Type, rec.TTL, previewData)
+			</tr>`, he(previewName), he(rec.Type), rec.TTL, he(previewData))
 	}
 
-html += fmt.Sprintf(`
+	html += fmt.Sprintf(`
                 </tbody>
             </table>
         </div>
@@ -650,29 +650,29 @@ html += fmt.Sprintf(`
 }
 
 func (s *Server) applyTemplate(c *gin.Context) {
-    templateID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-    if err != nil {
-        c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
-        return
-    }
+	templateID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.String(http.StatusBadRequest, s.tr(c, "Invalid template ID"))
+		return
+	}
 
-    zoneID, err := strconv.ParseUint(c.Query("zone_id"), 10, 32)
-    if err != nil {
-        c.String(http.StatusBadRequest, s.tr(c, "Invalid zone ID"))
-        return
-    }
+	zoneID, err := strconv.ParseUint(c.Query("zone_id"), 10, 32)
+	if err != nil {
+		c.String(http.StatusBadRequest, s.tr(c, "Invalid zone ID"))
+		return
+	}
 
 	var template db.Template
-    if err := s.db.Preload("Records").First(&template, templateID).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Template not found"))
-        return
-    }
+	if err := s.db.Preload("Records").First(&template, templateID).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Template not found"))
+		return
+	}
 
 	var zone db.Zone
-    if err := s.db.First(&zone, zoneID).Error; err != nil {
-        c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
-        return
-    }
+	if err := s.db.First(&zone, zoneID).Error; err != nil {
+		c.String(http.StatusNotFound, s.tr(c, "Zone not found"))
+		return
+	}
 
 	// Extract domain from zone name
 	domain := strings.TrimSuffix(zone.Name, ".")

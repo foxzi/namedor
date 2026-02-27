@@ -10,6 +10,8 @@ import (
 	"namedot/internal/db"
 )
 
+// he is available from zones.go (same package web)
+
 func (s *Server) editRecordForm(c *gin.Context) {
 	recordID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -138,28 +140,28 @@ func (s *Server) editRecordForm(c *gin.Context) {
 		s.tr(c, "Edit Record"),
 		recordID,
 		s.tr(c, "Name"),
-		rrset.Name,
+		he(rrset.Name),
 		s.tr(c, "Name cannot be changed"),
 		s.tr(c, "Type"),
-		rrset.Type,
+		he(rrset.Type),
 		s.tr(c, "Type cannot be changed"),
 		s.tr(c, "TTL (seconds)"),
 		rrset.TTL,
 		s.tr(c, "Data (IP/Value)"),
-		dataValue,
+		he(dataValue),
 		displayForMX(rrset.Type),
 		s.tr(c, "MX Priority"),
 		mxPriority,
 		s.tr(c, "Lower value = higher priority (only for MX)"),
 		s.tr(c, "GeoIP Targeting (optional)"),
 		s.tr(c, "Country Code"),
-		country,
+		he(country),
 		s.tr(c, "Continent Code"),
-		continent,
+		he(continent),
 		s.tr(c, "ASN"),
 		asn,
 		s.tr(c, "Subnet"),
-		subnet,
+		he(subnet),
 		rrset.ZoneID,
 		rrset.ID,
 		s.tr(c, "Update Record"),
@@ -243,7 +245,7 @@ func (s *Server) updateRecord(c *gin.Context) {
 	record.Subnet = stringPtr(subnet)
 
 	if err := s.db.Save(&record).Error; err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error updating record: %s"), err.Error()))
+		c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error updating record: %s"), he(err.Error())))
 		return
 	}
 
@@ -252,7 +254,7 @@ func (s *Server) updateRecord(c *gin.Context) {
 		if uint32(ttl) != rrset.TTL {
 			rrset.TTL = uint32(ttl)
 			if err := s.db.Save(&rrset).Error; err != nil {
-				c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error updating TTL: %s"), err.Error()))
+				c.String(http.StatusInternalServerError, fmt.Sprintf(s.tr(c, "Error updating TTL: %s"), he(err.Error())))
 				return
 			}
 		}

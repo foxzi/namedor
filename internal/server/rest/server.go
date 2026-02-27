@@ -68,6 +68,13 @@ func NewServer(cfg *config.Config, db *gorm.DB, dnsServer DNSServer) *Server {
 		log.Printf("Web admin panel enabled at /admin")
 	}
 
+	// Limit request body size to prevent DoS via large payloads (10 MB)
+	const maxBodyBytes = 10 << 20
+	r.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
+		c.Next()
+	})
+
 	auth := func(c *gin.Context) {
 		token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
 
@@ -124,8 +131,12 @@ func NewServer(cfg *config.Config, db *gorm.DB, dnsServer DNSServer) *Server {
 
 func (s *Server) Start() error {
 	s.httpServer = &http.Server{
-		Addr:    s.cfg.RESTListen,
-		Handler: s.r,
+		Addr:              s.cfg.RESTListen,
+		Handler:           s.r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	if s.cfg.IsTLSEnabled() {

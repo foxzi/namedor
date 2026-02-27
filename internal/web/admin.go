@@ -2,6 +2,7 @@ package web
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"embed"
 	"encoding/base64"
 	"html/template"
@@ -283,9 +284,17 @@ func (s *Server) setLang(c *gin.Context) {
 	}
 	// 365 days
 	s.setSecureCookie(c, "lang", code, 365*24*3600, "/")
+	// Only allow relative redirects to prevent open redirect via Referer header
 	ref := c.Request.Referer()
-	if ref == "" {
-		ref = "/admin"
+	if ref == "" || !strings.HasPrefix(ref, "/") {
+		host := c.Request.Host
+		if strings.HasPrefix(ref, "https://"+host+"/") {
+			ref = ref[len("https://"+host):]
+		} else if strings.HasPrefix(ref, "http://"+host+"/") {
+			ref = ref[len("http://"+host):]
+		} else {
+			ref = "/admin"
+		}
 	}
 	c.Redirect(http.StatusFound, ref)
 }
@@ -330,7 +339,8 @@ func (s *Server) csrfMiddleware() gin.HandlerFunc {
 			token = c.PostForm("csrf_token")
 		}
 
-		if token == "" || token != expectedToken {
+		expected := expectedToken.(string)
+		if token == "" || subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}

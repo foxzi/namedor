@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,6 +13,11 @@ import (
 
 	"namedot/internal/db"
 )
+
+// he escapes a string for safe insertion into HTML context.
+func he(s string) string {
+	return html.EscapeString(s)
+}
 
 // cleanZoneSearch cleans up search query from URL protocols and paths
 func cleanZoneSearch(query string) string {
@@ -129,7 +135,7 @@ func (s *Server) listZones(c *gin.Context) {
                         %s
                     </button>
                 </td>
-            </tr>`, zone.Name, recordCount, zone.ID, s.tr(c, "View Records"), zone.ID, s.trf(c, "Delete zone %s?", zone.Name), s.tr(c, "Delete"))
+            </tr>`, he(zone.Name), recordCount, zone.ID, s.tr(c, "View Records"), zone.ID, he(s.trf(c, "Delete zone %s?", zone.Name)), s.tr(c, "Delete"))
 		}
 	}
 
@@ -169,7 +175,7 @@ func (s *Server) listZones(c *gin.Context) {
 }
 
 func (s *Server) newZoneForm(c *gin.Context) {
-    html := `
+	html := `
     <div style="background: #f7fafc; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
         <h3>` + s.tr(c, "Create New Zone") + `</h3>
         <form hx-post="/admin/zones" hx-target="#zones-list" hx-swap="innerHTML" style="display: flex; gap: 1rem; align-items: end; margin-top: 1rem;">
@@ -193,10 +199,10 @@ func (s *Server) newZoneForm(c *gin.Context) {
 
 func (s *Server) createZone(c *gin.Context) {
 	name := c.PostForm("name")
-    if name == "" {
-        c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Zone name is required")+`</div>`)
-        return
-    }
+	if name == "" {
+		c.String(http.StatusBadRequest, `<div class="error">`+s.tr(c, "Zone name is required")+`</div>`)
+		return
+	}
 
 	// Normalize zone name: lowercase and trailing dot
 	name = strings.ToLower(strings.TrimSpace(name))
@@ -205,10 +211,10 @@ func (s *Server) createZone(c *gin.Context) {
 	}
 
 	zone := db.Zone{Name: name}
-    if err := s.db.Create(&zone).Error; err != nil {
-        c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error creating zone: %s")+`</div>`, err.Error()))
-        return
-    }
+	if err := s.db.Create(&zone).Error; err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf(`<div class="error">`+s.tr(c, "Error creating zone: %s")+`</div>`, he(err.Error())))
+		return
+	}
 
 	// Ensure SOA exists right after zone creation when auto is enabled
 	db.BumpSOASerialAuto(s.db, zone, s.cfg.SOA.AutoOnMissing, s.cfg.SOA.Primary, s.cfg.SOA.Hostmaster)
