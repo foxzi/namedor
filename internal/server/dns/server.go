@@ -219,9 +219,34 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 		return nil, 0, "", fmt.Errorf("no zone")
 	}
 
+	zoneFQDN := dns.Fqdn(strings.ToLower(zone.Name))
+
 	// Find RRSet by FQDN name and type
+	if answers, ttl, rule, err = s.lookupExact(qname, qtype, zone, clientIP); err == nil {
+		return answers, ttl, rule, nil
+	}
+
+	// Wildcard fallback (RFC 4592)
+	for _, wcName := range wildcardNames(qname, zoneFQDN) {
+		if answers, ttl, rule, err = s.lookupExact(wcName, qtype, zone, clientIP); err == nil {
+			// Rewrite owner name from wildcard to original qname
+			for i, rr := range answers {
+				rr.Header().Name = qname
+				answers[i] = rr
+			}
+			return answers, ttl, "wildcard:" + rule, nil
+		}
+	}
+
+	return nil, 0, "", fmt.Errorf("not found")
+}
+
+// lookupExact tries exact name+type match, then CNAME fallback for the given name.
+func (s *Server) lookupExact(qname, qtype string, zone *dbm.Zone, clientIP netip.Addr) ([]dns.RR, uint32, string, error) {
+	zoneFQDN := dns.Fqdn(strings.ToLower(zone.Name))
+
 	var set dbm.RRSet
-	err = s.db.Preload("Records").
+	err := s.db.Preload("Records").
 		Where("zone_id = ? AND name = ? AND type = ?", zone.ID, strings.ToLower(qname), strings.ToUpper(qtype)).
 		First(&set).Error
 	if err != nil {
@@ -230,12 +255,11 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 		if e2 := s.db.Preload("Records").
 			Where("zone_id = ? AND name = ? AND type = ?", zone.ID, strings.ToLower(qname), "CNAME").
 			First(&cnameSet).Error; e2 == nil {
-			// Return CNAME rrset as the answer; resolvers will chase it
+			var answers []dns.RR
 			for _, rec := range cnameSet.Records {
-				// Support "@" shorthand in CNAME target to mean zone apex
 				target := rec.Data
 				if strings.TrimSpace(target) == "@" {
-					target = dns.Fqdn(strings.ToLower(zone.Name))
+					target = zoneFQDN
 				}
 				rr, perr := dns.NewRR(fmt.Sprintf("%s %d CNAME %s", qname, cnameSet.TTL, target))
 				if perr == nil {
@@ -251,11 +275,11 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 	g := s.geo.Lookup(clientIP)
 	recs, selectedRule := selectGeoRecords(set.Records, clientIP, g)
 
+	var answers []dns.RR
 	for _, rec := range recs {
-		// If answering CNAME directly, support "@" shorthand for apex in target
 		data := rec.Data
 		if strings.EqualFold(qtype, "CNAME") && strings.TrimSpace(data) == "@" {
-			data = dns.Fqdn(strings.ToLower(zone.Name))
+			data = zoneFQDN
 		}
 		rr, perr := dns.NewRR(fmt.Sprintf("%s %d %s %s", qname, set.TTL, strings.ToUpper(qtype), data))
 		if perr == nil {
@@ -263,6 +287,36 @@ func (s *Server) lookup(r *dns.Msg, q dns.Question, clientIP netip.Addr) (answer
 		}
 	}
 	return answers, set.TTL, selectedRule, nil
+}
+
+// wildcardNames returns wildcard candidate names for a query, from most specific to least.
+// E.g. for qname "foo.bar.example.com." and zone "example.com." it returns:
+// ["*.bar.example.com.", "*.example.com."]
+func wildcardNames(qname, zoneFQDN string) []string {
+	// Zone apex cannot match a wildcard
+	if qname == zoneFQDN {
+		return nil
+	}
+	var candidates []string
+	// Strip leftmost label iteratively
+	rest := qname
+	for {
+		idx := strings.Index(rest, ".")
+		if idx < 0 {
+			break
+		}
+		rest = rest[idx+1:]
+		if rest == "" {
+			break
+		}
+		candidate := "*." + rest
+		candidates = append(candidates, candidate)
+		// Stop when we've reached the zone level
+		if rest == zoneFQDN {
+			break
+		}
+	}
+	return candidates
 }
 
 func clientIPFrom(r *dns.Msg, w dns.ResponseWriter, useECS bool) netip.Addr {
